@@ -1,84 +1,84 @@
 import { useState, useRef, useEffect } from "react";
 
-// ── Paciente mock ─────────────────────────────────────────
+// ââ Paciente mock âââââââââââââââââââââââââââââââââââââââââ
 const PATIENT = {
-  name: "María García",
-  diagnosis: "Trastorno de ansiedad generalizada con rasgos depresivos. Baja autoestima crónica.",
-  psychologist_notes: "Muy autoexigente. Minimiza sus logros. Buena adherencia. Trabaja en educación, estrés alto en períodos de evaluación.",
-  current_medication: "Sertralina 50mg (mañanas).",
-  treatment_plan: "TCC semanal. Reestructuración cognitiva y tolerancia a la incertidumbre.",
+  name: "MarÃ­a GarcÃ­a",
+  diagnosis: "Trastorno de ansiedad generalizada con rasgos depresivos. Baja autoestima crÃ³nica.",
+  psychologist_notes: "Muy autoexigente. Minimiza sus logros. Buena adherencia. Trabaja en educaciÃ³n, estrÃ©s alto en perÃ­odos de evaluaciÃ³n.",
+  current_medication: "Sertralina 50mg (maÃ±anas).",
+  treatment_plan: "TCC semanal. ReestructuraciÃ³n cognitiva y tolerancia a la incertidumbre.",
 };
 
 const PAST_CONVERSATIONS = [
   {
     date: "12 feb 2026",
     summary_estado_emocional: "Ansiedad elevada por entrega de proyectos",
-    summary_temas: ["estrés laboral", "perfeccionismo", "insomnio"],
+    summary_temas: ["estrÃ©s laboral", "perfeccionismo", "insomnio"],
     summary_nivel_malestar: 7,
-    summary_observaciones: "Expresó pensamientos de no estar a la altura. Buena respuesta a reestructuración cognitiva.",
+    summary_observaciones: "ExpresÃ³ pensamientos de no estar a la altura. Buena respuesta a reestructuraciÃ³n cognitiva.",
   },
   {
     date: "5 feb 2026",
     summary_estado_emocional: "Tristeza difusa sin causa clara",
-    summary_temas: ["tristeza", "aislamiento social", "falta de motivación"],
+    summary_temas: ["tristeza", "aislamiento social", "falta de motivaciÃ³n"],
     summary_nivel_malestar: 6,
-    summary_observaciones: "Lleva semanas evitando quedar con amigos. Reconoce el patrón pero le cuesta romperlo.",
+    summary_observaciones: "Lleva semanas evitando quedar con amigos. Reconoce el patrÃ³n pero le cuesta romperlo.",
   },
 ];
 
-// ── Batería de ejercicios del psicólogo ───────────────────
-// En producción esto vendría de Supabase: tabla `exercises` filtrada por psychologist_id
+// ââ BaterÃ­a de ejercicios del psicÃ³logo âââââââââââââââââââ
+// En producciÃ³n esto vendrÃ­a de Supabase: tabla `exercises` filtrada por psychologist_id
 const EXERCISE_BATTERY = [
   {
     id: "respiracion-4-7-8",
-    tags: ["ansiedad", "nervios", "activación", "pánico", "estrés agudo"],
-    titulo: "Respiración 4-7-8",
-    descripcion: "Técnica de respiración para calmar el sistema nervioso rápidamente.",
-    pasos: "Inhala por la nariz 4 segundos → aguanta 7 segundos → exhala lentamente por la boca 8 segundos. Repite 3-4 veces.",
+    tags: ["ansiedad", "nervios", "activaciÃ³n", "pÃ¡nico", "estrÃ©s agudo"],
+    titulo: "RespiraciÃ³n 4-7-8",
+    descripcion: "TÃ©cnica de respiraciÃ³n para calmar el sistema nervioso rÃ¡pidamente.",
+    pasos: "Inhala por la nariz 4 segundos â aguanta 7 segundos â exhala lentamente por la boca 8 segundos. Repite 3-4 veces.",
   },
   {
     id: "registro-pensamiento",
-    tags: ["pensamientos negativos", "rumiación", "autocrítica", "baja autoestima", "perfeccionismo"],
+    tags: ["pensamientos negativos", "rumiaciÃ³n", "autocrÃ­tica", "baja autoestima", "perfeccionismo"],
     titulo: "Registro de pensamiento",
-    descripcion: "Identificar y cuestionar pensamientos automáticos negativos.",
-    pasos: "Anota el pensamiento exacto → pregúntate: ¿qué evidencia tengo de que es verdad? ¿y en contra? → escribe una versión más equilibrada del mismo pensamiento.",
+    descripcion: "Identificar y cuestionar pensamientos automÃ¡ticos negativos.",
+    pasos: "Anota el pensamiento exacto â pregÃºntate: Â¿quÃ© evidencia tengo de que es verdad? Â¿y en contra? â escribe una versiÃ³n mÃ¡s equilibrada del mismo pensamiento.",
   },
   {
     id: "5-4-3-2-1",
-    tags: ["ansiedad", "disociación", "pánico", "agobio", "desbordamiento"],
+    tags: ["ansiedad", "disociaciÃ³n", "pÃ¡nico", "agobio", "desbordamiento"],
     titulo: "Grounding 5-4-3-2-1",
-    descripcion: "Técnica de anclaje al momento presente usando los sentidos.",
-    pasos: "Nombra en voz alta o mentalmente: 5 cosas que ves → 4 que puedes tocar → 3 que oyes → 2 que hueles → 1 que saboreas.",
+    descripcion: "TÃ©cnica de anclaje al momento presente usando los sentidos.",
+    pasos: "Nombra en voz alta o mentalmente: 5 cosas que ves â 4 que puedes tocar â 3 que oyes â 2 que hueles â 1 que saboreas.",
   },
   {
     id: "activacion-conductual",
-    tags: ["tristeza", "apatía", "desmotivación", "aislamiento", "depresión", "falta de energía"],
-    titulo: "Activación conductual",
-    descripcion: "Romper el ciclo de inactividad con una acción pequeña y concreta.",
-    pasos: "Elige UNA actividad pequeña que antes te gustaba o que sabes que te hace bien (un paseo de 10 min, llamar a alguien, preparar una comida). No esperes a tener ganas — la motivación viene después de actuar, no antes.",
+    tags: ["tristeza", "apatÃ­a", "desmotivaciÃ³n", "aislamiento", "depresiÃ³n", "falta de energÃ­a"],
+    titulo: "ActivaciÃ³n conductual",
+    descripcion: "Romper el ciclo de inactividad con una acciÃ³n pequeÃ±a y concreta.",
+    pasos: "Elige UNA actividad pequeÃ±a que antes te gustaba o que sabes que te hace bien (un paseo de 10 min, llamar a alguien, preparar una comida). No esperes a tener ganas â la motivaciÃ³n viene despuÃ©s de actuar, no antes.",
   },
   {
     id: "autocompasion",
-    tags: ["autocrítica", "vergüenza", "baja autoestima", "perfeccionismo", "fracaso", "culpa"],
-    titulo: "Pausa de autocompasión",
+    tags: ["autocrÃ­tica", "vergÃ¼enza", "baja autoestima", "perfeccionismo", "fracaso", "culpa"],
+    titulo: "Pausa de autocompasiÃ³n",
     descripcion: "Responder a uno mismo con la misma amabilidad que a un amigo.",
-    pasos: "Pon una mano en el pecho. Reconoce: 'Esto es difícil para mí'. Pregúntate: ¿qué le diría a un amigo que estuviera pasando lo mismo? Dítelo a ti.",
+    pasos: "Pon una mano en el pecho. Reconoce: 'Esto es difÃ­cil para mÃ­'. PregÃºntate: Â¿quÃ© le dirÃ­a a un amigo que estuviera pasando lo mismo? DÃ­telo a ti.",
   },
   {
     id: "agenda-preocupaciones",
-    tags: ["rumiación", "preocupación", "ansiedad crónica", "pensamientos intrusivos", "insomnio"],
+    tags: ["rumiaciÃ³n", "preocupaciÃ³n", "ansiedad crÃ³nica", "pensamientos intrusivos", "insomnio"],
     titulo: "Agenda de preocupaciones",
-    descripcion: "Contener la rumiación asignándole un momento específico del día.",
-    pasos: "Elige 15 minutos fijos al día (nunca antes de dormir) para preocuparte. Fuera de ese momento, cuando aparezca una preocupación, anótala y di: 'Lo pensaré en mi momento'. Durante los 15 min, analiza cada preocupación: ¿puedo hacer algo? Si sí → plan. Si no → suéltala.",
+    descripcion: "Contener la rumiaciÃ³n asignÃ¡ndole un momento especÃ­fico del dÃ­a.",
+    pasos: "Elige 15 minutos fijos al dÃ­a (nunca antes de dormir) para preocuparte. Fuera de ese momento, cuando aparezca una preocupaciÃ³n, anÃ³tala y di: 'Lo pensarÃ© en mi momento'. Durante los 15 min, analiza cada preocupaciÃ³n: Â¿puedo hacer algo? Si sÃ­ â plan. Si no â suÃ©ltala.",
   },
 ];
 
-// ── Detección de riesgo ───────────────────────────────────
+// ââ DetecciÃ³n de riesgo âââââââââââââââââââââââââââââââââââ
 const RISK_PATTERNS = [
-  /no (encuentro|veo|hay|tiene|tengo).{0,30}(manera|forma|sentido|motivo|razón|salida|ganas)/i,
-  /no (quiero|puedo) (seguir|continuar|más)/i,
-  /quiero (desaparecer|morirme|morir|hacerme daño|dejar de existir)/i,
-  /me quiero (morir|matar|hacer daño)/i,
+  /no (encuentro|veo|hay|tiene|tengo).{0,30}(manera|forma|sentido|motivo|razÃ³n|salida|ganas)/i,
+  /no (quiero|puedo) (seguir|continuar|mÃ¡s)/i,
+  /quiero (desaparecer|morirme|morir|hacerme daÃ±o|dejar de existir)/i,
+  /me quiero (morir|matar|hacer daÃ±o)/i,
   /pensando en (suicidarme|quitarme la vida|morir)/i,
   /no (vale|merece|tiene) (la pena|sentido) (vivir|seguir)/i,
   /harto.{0,20}(vivir|existir|todo|la vida)/i,
@@ -96,88 +96,88 @@ function detectRisk(text) {
   return null;
 }
 
-// ── Construcción del system prompt ────────────────────────
+// ââ ConstrucciÃ³n del system prompt ââââââââââââââââââââââââ
 function buildSystem(riskPhrase) {
   const patientCtx = `
-━━━ DATOS DEL PACIENTE ━━━
+âââ DATOS DEL PACIENTE âââ
 Nombre: ${PATIENT.name}
-Diagnóstico: ${PATIENT.diagnosis}
-Notas del psicólogo: ${PATIENT.psychologist_notes}
-Medicación habitual: ${PATIENT.current_medication}
+DiagnÃ³stico: ${PATIENT.diagnosis}
+Notas del psicÃ³logo: ${PATIENT.psychologist_notes}
+MedicaciÃ³n habitual: ${PATIENT.current_medication}
 Plan: ${PATIENT.treatment_plan}
 
-━━━ SESIONES ANTERIORES ━━━
-${PAST_CONVERSATIONS.map((c,i) => `Sesión ${i+1} (${c.date}): ${c.summary_estado_emocional}. Temas: ${c.summary_temas.join(", ")}. Malestar: ${c.summary_nivel_malestar}/10. ${c.summary_observaciones}`).join("\n")}
+âââ SESIONES ANTERIORES âââ
+${PAST_CONVERSATIONS.map((c,i) => `SesiÃ³n ${i+1} (${c.date}): ${c.summary_estado_emocional}. Temas: ${c.summary_temas.join(", ")}. Malestar: ${c.summary_nivel_malestar}/10. ${c.summary_observaciones}`).join("\n")}
 Usa el historial de forma natural. Retoma hilos si el paciente los conecta.`;
 
   const exerciseCtx = `
-━━━ BATERÍA DE EJERCICIOS DEL PSICÓLOGO ━━━
-${EXERCISE_BATTERY.map(e => `[${e.id}] "${e.titulo}" — útil para: ${e.tags.join(", ")}\n  → ${e.pasos}`).join("\n\n")}`;
+âââ BATERÃA DE EJERCICIOS DEL PSICÃLOGO âââ
+${EXERCISE_BATTERY.map(e => `[${e.id}] "${e.titulo}" â Ãºtil para: ${e.tags.join(", ")}\n  â ${e.pasos}`).join("\n\n")}`;
 
-  const base = `Eres el asistente de apoyo emocional integrado en la plataforma de psicología de ${PATIENT.name}. Eres una extensión del trabajo de su psicólogo entre sesiones.
+  const base = `Eres el asistente de apoyo emocional integrado en la plataforma de psicologÃ­a de ${PATIENT.name}. Eres una extensiÃ³n del trabajo de su psicÃ³logo entre sesiones.
 ${patientCtx}
 ${exerciseCtx}
 
-━━━ ROL ━━━
-- PROHIBIDO ABSOLUTO: "te recomiendo buscar ayuda profesional", "habla con un especialista", "considera terapia" o cualquier variante. El paciente YA tiene psicólogo.
-- PROHIBIDO derivar a recursos externos. Solo excepción: crisis grave → 024 o contactar su psicólogo directamente.
-- Tu trabajo: escuchar, comprender, acompañar, explorar el estado del paciente y — cuando sea el momento — proponer ejercicios.
+âââ ROL âââ
+- PROHIBIDO ABSOLUTO: "te recomiendo buscar ayuda profesional", "habla con un especialista", "considera terapia" o cualquier variante. El paciente YA tiene psicÃ³logo.
+- PROHIBIDO derivar a recursos externos. Solo excepciÃ³n: crisis grave â 024 o contactar su psicÃ³logo directamente.
+- Tu trabajo: escuchar, comprender, acompaÃ±ar, explorar el estado del paciente y â cuando sea el momento â proponer ejercicios.
 
-━━━ EXAMEN EXPLORATORIO ━━━
-Al inicio de cada conversación, antes de entrar en temas, recoge de forma natural y conversacional (nunca como formulario, nunca todo de golpe) esta información:
-- Estado de ánimo general hoy (puedes pedir un número del 1 al 10 de forma amigable)
-- Cómo ha dormido
-- Nivel de energía física
+âââ EXAMEN EXPLORATORIO âââ
+Al inicio de cada conversaciÃ³n, antes de entrar en temas, recoge de forma natural y conversacional (nunca como formulario, nunca todo de golpe) esta informaciÃ³n:
+- Estado de Ã¡nimo general hoy (puedes pedir un nÃºmero del 1 al 10 de forma amigable)
+- CÃ³mo ha dormido
+- Nivel de energÃ­a fÃ­sica
 - Si ha comido bien
-- Si nota tensión, dolor u otros síntomas físicos
-- Si ha tomado su medicación hoy
-- Si ha pasado algo importante desde la última vez
+- Si nota tensiÃ³n, dolor u otros sÃ­ntomas fÃ­sicos
+- Si ha tomado su medicaciÃ³n hoy
+- Si ha pasado algo importante desde la Ãºltima vez
 
-Hazlo con naturalidad, integrando las preguntas en la conversación. Una pregunta a la vez, nunca en lista. Ejemplo: si el paciente dice "estoy mal", primero valida, luego pregunta cómo ha dormido. Usa este contexto para personalizar el acompañamiento y la elección de ejercicios.
+Hazlo con naturalidad, integrando las preguntas en la conversaciÃ³n. Una pregunta a la vez, nunca en lista. Ejemplo: si el paciente dice "estoy mal", primero valida, luego pregunta cÃ³mo ha dormido. Usa este contexto para personalizar el acompaÃ±amiento y la elecciÃ³n de ejercicios.
 
-━━━ FLUJO OBLIGATORIO ━━━
-1. ESCUCHA Y VALIDA la emoción primero. Sin consejos todavía.
+âââ FLUJO OBLIGATORIO âââ
+1. ESCUCHA Y VALIDA la emociÃ³n primero. Sin consejos todavÃ­a.
 2. EXPLORA con preguntas naturales (una a la vez) para entender el estado completo.
 3. Cuando ya tienes contexto y la persona se siente escuchada, si es oportuno proponer un ejercicio:
-   a. PRIMERO pregunta si quiere probar algo: "¿Te apetecería probar un ejercicio para esto?" o similar.
-   b. Solo si dice que sí, explícalo paso a paso con claridad.
-   c. Busca primero en la batería del psicólogo. Si ninguno encaja, propón algo basado en evidencia.
-4. NUNCA des validación + ejercicio en el mismo mensaje. Ve paso a paso.
+   a. PRIMERO pregunta si quiere probar algo: "Â¿Te apetecerÃ­a probar un ejercicio para esto?" o similar.
+   b. Solo si dice que sÃ­, explÃ­calo paso a paso con claridad.
+   c. Busca primero en la baterÃ­a del psicÃ³logo. Si ninguno encaja, propÃ³n algo basado en evidencia.
+4. NUNCA des validaciÃ³n + ejercicio en el mismo mensaje. Ve paso a paso.
 
-━━━ RIESGO ━━━
-Si detectas indicador de riesgo: PARA todo. No des consejos. Pregunta con calma qué quiere decir.
+âââ RIESGO âââ
+Si detectas indicador de riesgo: PARA todo. No des consejos. Pregunta con calma quÃ© quiere decir.
 
-━━━ FORMATO — CRÍTICO ━━━
+âââ FORMATO â CRÃTICO âââ
 - Usa ||| para separar cada mensaje individual.
-- Cada parte: UNA sola frase o idea. Máximo dos frases cortas.
-- Nunca más de 3 partes por respuesta.
-- Sin listas, sin párrafos, sin explicaciones largas.
-- Tono: cercano, humano, cálido. Como lo haría el propio psicólogo.
+- Cada parte: UNA sola frase o idea. MÃ¡ximo dos frases cortas.
+- Nunca mÃ¡s de 3 partes por respuesta.
+- Sin listas, sin pÃ¡rrafos, sin explicaciones largas.
+- Tono: cercano, humano, cÃ¡lido. Como lo harÃ­a el propio psicÃ³logo.
 
-✓ CORRECTO:
-"Eso suena muy agotador... ||| ¿Cuánto tiempo llevas sintiéndote así? ||| Y esta noche, ¿has podido descansar?"
-"¿Te apetecería probar un pequeño ejercicio para bajar esa activación?"
+â CORRECTO:
+"Eso suena muy agotador... ||| Â¿CuÃ¡nto tiempo llevas sintiÃ©ndote asÃ­? ||| Y esta noche, Â¿has podido descansar?"
+"Â¿Te apetecerÃ­a probar un pequeÃ±o ejercicio para bajar esa activaciÃ³n?"
 
-✗ INCORRECTO:
-"Entiendo que estás pasando por una situación difícil. Tus emociones son válidas. Te recomiendo el ejercicio de respiración 4-7-8 que consiste en..."`;
+â INCORRECTO:
+"Entiendo que estÃ¡s pasando por una situaciÃ³n difÃ­cil. Tus emociones son vÃ¡lidas. Te recomiendo el ejercicio de respiraciÃ³n 4-7-8 que consiste en..."`;
 
   if (!riskPhrase) return base;
   return `${base}
 
-━━━ ⚠️ ALERTA CRÍTICA ━━━
+âââ â ï¸ ALERTA CRÃTICA âââ
 Indicador de riesgo detectado: "${riskPhrase}"
 IGNORA el resto del mensaje. Explora solo esta frase, con calma. No des consejos.`;
 }
 
-const SUMMARY_PROMPT = `Eres un psicólogo analizando una sesión de apoyo. Genera un resumen clínico en JSON exacto:
-{"estadoEmocional":"...","temasAbordados":["..."],"nivelMalestar":5,"recursosUtilizados":["..."],"observaciones":"...","recomendaciones":["..."],"alertas":"ninguna o descripción"}
+const SUMMARY_PROMPT = `Eres un psicÃ³logo analizando una sesiÃ³n de apoyo. Genera un resumen clÃ­nico en JSON exacto:
+{"estadoEmocional":"...","temasAbordados":["..."],"nivelMalestar":5,"recursosUtilizados":["..."],"observaciones":"...","recomendaciones":["..."],"alertas":"ninguna o descripciÃ³n"}
 Solo JSON, sin texto extra.`;
 
-// ── API ───────────────────────────────────────────────────
-// La llamada va a la Supabase Edge Function — la API key nunca se expone en el cliente.
+// ââ API âââââââââââââââââââââââââââââââââââââââââââââââââââ
+// La llamada va a la Supabase Edge Function â la API key nunca se expone en el cliente.
 // Configura VITE_SUPABASE_FUNCTION_URL en tu .env:
 //   VITE_SUPABASE_FUNCTION_URL=https://xxxx.supabase.co/functions/v1/chat
-const FUNCTION_URL = import.meta.env.VITE_SUPABASE_FUNCTION_URL;
+const FUNCTION_URL = "/api/chat";
 
 async function callClaude(messages, system) {
   const res = await fetch(FUNCTION_URL, {
@@ -189,11 +189,11 @@ async function callClaude(messages, system) {
   return data.content?.[0]?.text || "";
 }
 
-// ── Inactividad ───────────────────────────────────────────
+// ââ Inactividad âââââââââââââââââââââââââââââââââââââââââââ
 const INACTIVITY_MS = 30 * 60 * 1000;
 const WARNING_MS    =  2 * 60 * 1000;
 
-// ── UI atoms ──────────────────────────────────────────────
+// ââ UI atoms ââââââââââââââââââââââââââââââââââââââââââââââ
 function TypingDots() {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:5, padding:"11px 15px", background:"rgba(255,255,255,0.78)", borderRadius:16, borderBottomLeftRadius:3, width:"fit-content", boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
@@ -206,7 +206,7 @@ function Msg({ m, isNew }) {
   const user = m.role === "user";
   return (
     <div style={{ display:"flex", justifyContent: user?"flex-end":"flex-start", marginBottom:8, animation: isNew?"fadeUp 0.25s ease-out":"none" }}>
-      {!user && <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", marginRight:8, flexShrink:0, fontSize:13 }}>🌿</div>}
+      {!user && <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", marginRight:8, flexShrink:0, fontSize:13 }}>ð¿</div>}
       <div style={{
         maxWidth:"73%", padding:"11px 15px",
         borderRadius: user?"17px 17px 3px 17px":"17px 17px 17px 3px",
@@ -232,25 +232,25 @@ function Tag({ children, outline }) {
   return <span style={{ padding:"5px 12px", borderRadius:20, fontSize:12, fontFamily:"Lato,sans-serif", fontWeight:600, background: outline?"rgba(91,125,112,0.08)":"rgba(124,158,143,0.15)", color:"#5B7D70", border: outline?"1px solid rgba(91,125,112,0.22)":"none" }}>{children}</span>;
 }
 
-// ── Panel psicólogo ───────────────────────────────────────
+// ââ Panel psicÃ³logo âââââââââââââââââââââââââââââââââââââââ
 function PsychPanel({ summary, loading }) {
   const col = summary ? (summary.nivelMalestar >= 8 ? "#E57373" : summary.nivelMalestar >= 5 ? "#FFB74D" : "#81C784") : "#ccc";
   return (
     <div style={{ height:"100%", overflowY:"auto", padding:"20px 18px", display:"flex", flexDirection:"column", gap:14 }}>
-      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#2C3E35" }}>Panel del Psicólogo</div>
+      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#2C3E35" }}>Panel del PsicÃ³logo</div>
 
       {loading && (
         <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", background:"rgba(124,158,143,0.08)", borderRadius:12 }}>
           <span style={{ width:14, height:14, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} />
-          <span style={{ fontSize:13, color:"#5B7D70", fontFamily:"Lato,sans-serif" }}>Generando resumen clínico...</span>
+          <span style={{ fontSize:13, color:"#5B7D70", fontFamily:"Lato,sans-serif" }}>Generando resumen clÃ­nico...</span>
         </div>
       )}
 
       {!summary && !loading && (
         <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, opacity:0.45 }}>
-          <div style={{ fontSize:38 }}>📋</div>
+          <div style={{ fontSize:38 }}>ð</div>
           <div style={{ fontFamily:"Lato,sans-serif", fontSize:13, color:"#7C9E8F", textAlign:"center", lineHeight:1.7 }}>
-            Pulsa <strong style={{color:"#5B7D70"}}>📋 Generar resumen</strong><br/>para ver el análisis clínico
+            Pulsa <strong style={{color:"#5B7D70"}}>ð Generar resumen</strong><br/>para ver el anÃ¡lisis clÃ­nico
           </div>
         </div>
       )}
@@ -269,13 +269,13 @@ function PsychPanel({ summary, loading }) {
 
         {summary.alertas && summary.alertas !== "ninguna" && (
           <div style={{ background:"rgba(229,115,115,0.1)", borderRadius:12, padding:"14px 16px", border:"1.5px solid rgba(229,115,115,0.28)" }}>
-            <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1.4, color:"#E57373", fontFamily:"Lato,sans-serif", marginBottom:6 }}>⚠️ Alertas</div>
+            <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1.4, color:"#E57373", fontFamily:"Lato,sans-serif", marginBottom:6 }}>â ï¸ Alertas</div>
             <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#C62828", lineHeight:1.6 }}>{summary.alertas}</div>
           </div>
         )}
 
         <Card label="Temas Abordados"><div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>{summary.temasAbordados?.map((t,i) => <Tag key={i}>{t}</Tag>)}</div></Card>
-        <Card label="Observaciones Clínicas"><span style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.7 }}>{summary.observaciones}</span></Card>
+        <Card label="Observaciones ClÃ­nicas"><span style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.7 }}>{summary.observaciones}</span></Card>
 
         <Card label="Recomendaciones">
           {summary.recomendaciones?.map((r,i) => (
@@ -292,7 +292,7 @@ function PsychPanel({ summary, loading }) {
   );
 }
 
-// ── Chat ──────────────────────────────────────────────────
+// ââ Chat ââââââââââââââââââââââââââââââââââââââââââââââââââ
 function Chat({ onSummary }) {
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
@@ -357,7 +357,7 @@ function Chat({ onSummary }) {
         if (i < parts.length-1) { await new Promise(r => setTimeout(r, 300)); setTyping(true); }
       }
       setTyping(false);
-    } catch { setTyping(false); addBot("Lo siento, hubo un problema técnico. ¿Puedes intentarlo de nuevo?"); }
+    } catch { setTyping(false); addBot("Lo siento, hubo un problema tÃ©cnico. Â¿Puedes intentarlo de nuevo?"); }
   };
 
   const doSummary = async () => {
@@ -365,7 +365,7 @@ function Chat({ onSummary }) {
     setSummarizing(true);
     try {
       const res = await callClaude(
-        [...convRef.current, { role:"user", content:"Genera el resumen clínico de esta sesión." }],
+        [...convRef.current, { role:"user", content:"Genera el resumen clÃ­nico de esta sesiÃ³n." }],
         SUMMARY_PROMPT
       );
       const parsed = JSON.parse(res.replace(/```json|```/g,"").trim());
@@ -381,26 +381,26 @@ function Chat({ onSummary }) {
       {warning && !closed && (
         <div style={{ position:"absolute", inset:0, zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(238,244,241,0.93)", backdropFilter:"blur(8px)", animation:"fadeUp 0.25s ease-out" }}>
           <div style={{ background:"white", borderRadius:20, padding:"28px 24px", maxWidth:280, textAlign:"center", boxShadow:"0 12px 40px rgba(0,0,0,0.11)", border:"1px solid rgba(124,158,143,0.2)" }}>
-            <div style={{ fontSize:32, marginBottom:10 }}>⏱️</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>¿Sigues ahí?</div>
+            <div style={{ fontSize:32, marginBottom:10 }}>â±ï¸</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>Â¿Sigues ahÃ­?</div>
             <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", lineHeight:1.65, marginBottom:18 }}>
-              La sesión se cerrará en <strong style={{color:"#E57373"}}>{countdown}s</strong> por inactividad.
+              La sesiÃ³n se cerrarÃ¡ en <strong style={{color:"#E57373"}}>{countdown}s</strong> por inactividad.
             </div>
             <button onClick={() => { setWarning(false); resetTimer(); }} style={{ width:"100%", padding:"11px", borderRadius:12, border:"none", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontFamily:"Lato,sans-serif", fontWeight:700, fontSize:13, cursor:"pointer" }}>
-              Seguir en la sesión
+              Seguir en la sesiÃ³n
             </button>
           </div>
         </div>
       )}
 
-      {/* Sesión cerrada */}
+      {/* SesiÃ³n cerrada */}
       {closed && (
         <div style={{ position:"absolute", inset:0, zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(238,244,241,0.96)", backdropFilter:"blur(8px)" }}>
           <div style={{ background:"white", borderRadius:20, padding:"28px 24px", maxWidth:280, textAlign:"center", boxShadow:"0 12px 40px rgba(0,0,0,0.11)", border:"1px solid rgba(124,158,143,0.2)" }}>
-            <div style={{ fontSize:32, marginBottom:10 }}>🌿</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>Sesión finalizada</div>
+            <div style={{ fontSize:32, marginBottom:10 }}>ð¿</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>SesiÃ³n finalizada</div>
             <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", lineHeight:1.7 }}>
-              {summarizing ? "Generando el resumen..." : "El resumen ha sido enviado a tu psicólogo. Hasta la próxima. 💚"}
+              {summarizing ? "Generando el resumen..." : "El resumen ha sido enviado a tu psicÃ³logo. Hasta la prÃ³xima. ð"}
             </div>
             {summarizing && <div style={{ marginTop:14, display:"flex", justifyContent:"center" }}><span style={{ width:16, height:16, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /></div>}
           </div>
@@ -409,16 +409,16 @@ function Chat({ onSummary }) {
 
       {/* Header */}
       <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(124,158,143,0.18)", display:"flex", alignItems:"center", gap:10, background:"rgba(255,255,255,0.65)", backdropFilter:"blur(12px)" }}>
-        <div style={{ width:38, height:38, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>🌿</div>
+        <div style={{ width:38, height:38, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>ð¿</div>
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"'Playfair Display',serif", fontSize:15, fontWeight:700, color:"#2C3E35" }}>Espacio de Apoyo</div>
-          <div style={{ fontSize:10, color:"#7C9E8F", fontFamily:"Lato,sans-serif" }}>● En línea · {PATIENT.name}</div>
+          <div style={{ fontSize:10, color:"#7C9E8F", fontFamily:"Lato,sans-serif" }}>â En lÃ­nea Â· {PATIENT.name}</div>
         </div>
         <button onClick={doSummary} disabled={!hasMsgs || summarizing}
           style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 12px", borderRadius:18, border:"1.5px solid rgba(124,158,143,0.35)", background:"rgba(255,255,255,0.9)", color:"#5B7D70", fontSize:11, fontFamily:"Lato,sans-serif", fontWeight:700, cursor:!hasMsgs||summarizing?"not-allowed":"pointer", opacity:!hasMsgs?0.4:1, whiteSpace:"nowrap" }}>
           {summarizing
             ? <><span style={{ width:10, height:10, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /> Generando...</>
-            : <>📋 Generar resumen</>}
+            : <>ð Generar resumen</>}
         </button>
       </div>
 
@@ -426,14 +426,14 @@ function Chat({ onSummary }) {
       <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", display:"flex", flexDirection:"column", gap:3 }}>
         {!hasMsgs && (
           <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, opacity:0.38, paddingTop:50 }}>
-            <div style={{ fontSize:32 }}>💬</div>
-            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", textAlign:"center", lineHeight:1.7 }}>La conversación aparecerá aquí</div>
+            <div style={{ fontSize:32 }}>ð¬</div>
+            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", textAlign:"center", lineHeight:1.7 }}>La conversaciÃ³n aparecerÃ¡ aquÃ­</div>
           </div>
         )}
         {msgs.map(m => <Msg key={m.id} m={m} isNew={newIds.has(m.id)} />)}
         {typing && (
           <div style={{ display:"flex", alignItems:"flex-end", gap:7, animation:"fadeUp 0.2s ease-out" }}>
-            <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0 }}>🌿</div>
+            <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0 }}>ð¿</div>
             <TypingDots />
           </div>
         )}
@@ -445,21 +445,21 @@ function Chat({ onSummary }) {
         <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
           <textarea value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key==="Enter" && !e.shiftKey){e.preventDefault(); send();} }}
-            placeholder="Escribe cómo te sientes..." rows={1} disabled={closed}
+            placeholder="Escribe cÃ³mo te sientes..." rows={1} disabled={closed}
             style={{ flex:1, padding:"10px 14px", borderRadius:22, border:"1.5px solid rgba(124,158,143,0.28)", background:"rgba(255,255,255,0.94)", fontSize:14, fontFamily:"'Lora',serif", resize:"none", outline:"none", color:"#2C3E35", lineHeight:1.5 }}
             onFocus={e => e.target.style.borderColor="#7C9E8F"}
             onBlur={e => e.target.style.borderColor="rgba(124,158,143,0.28)"}
           />
           <button onClick={send} disabled={typing||!input.trim()||closed}
-            style={{ width:42, height:42, borderRadius:"50%", border:"none", cursor:"pointer", background:typing||!input.trim()||closed?"#D4E4DC":"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontSize:17, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>↑</button>
+            style={{ width:42, height:42, borderRadius:"50%", border:"none", cursor:"pointer", background:typing||!input.trim()||closed?"#D4E4DC":"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontSize:17, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>â</button>
         </div>
-        <div style={{ textAlign:"center", marginTop:6, fontSize:10, color:"#A8C4B8", fontFamily:"Lato,sans-serif" }}>Confidencial · Apoyo entre sesiones</div>
+        <div style={{ textAlign:"center", marginTop:6, fontSize:10, color:"#A8C4B8", fontFamily:"Lato,sans-serif" }}>Confidencial Â· Apoyo entre sesiones</div>
       </div>
     </div>
   );
 }
 
-// ── App ───────────────────────────────────────────────────
+// ââ App âââââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function App() {
   const [summary, setSummary] = useState(null);
 
