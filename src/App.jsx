@@ -1,84 +1,33 @@
 import { useState, useRef, useEffect } from "react";
 
-// ââ Paciente mock âââââââââââââââââââââââââââââââââââââââââ
+// ── Paciente mock ──────────────────────────────────────────
 const PATIENT = {
-  name: "MarÃ­a GarcÃ­a",
-  diagnosis: "Trastorno de ansiedad generalizada con rasgos depresivos. Baja autoestima crÃ³nica.",
-  psychologist_notes: "Muy autoexigente. Minimiza sus logros. Buena adherencia. Trabaja en educaciÃ³n, estrÃ©s alto en perÃ­odos de evaluaciÃ³n.",
-  current_medication: "Sertralina 50mg (maÃ±anas).",
-  treatment_plan: "TCC semanal. ReestructuraciÃ³n cognitiva y tolerancia a la incertidumbre.",
+  name: "María García",
+  diagnosis: "Trastorno de ansiedad generalizada con rasgos depresivos. Baja autoestima crónica.",
+  psychologist_notes: "Muy autoexigente. Minimiza sus logros. Buena adherencia. Trabaja en educación, estrés alto en períodos de evaluación.",
+  current_medication: "Sertralina 50mg (mañanas).",
+  treatment_plan: "TCC semanal. Reestructuración cognitiva y tolerancia a la incertidumbre.",
 };
 
 const PAST_CONVERSATIONS = [
-  {
-    date: "12 feb 2026",
-    summary_estado_emocional: "Ansiedad elevada por entrega de proyectos",
-    summary_temas: ["estrÃ©s laboral", "perfeccionismo", "insomnio"],
-    summary_nivel_malestar: 7,
-    summary_observaciones: "ExpresÃ³ pensamientos de no estar a la altura. Buena respuesta a reestructuraciÃ³n cognitiva.",
-  },
-  {
-    date: "5 feb 2026",
-    summary_estado_emocional: "Tristeza difusa sin causa clara",
-    summary_temas: ["tristeza", "aislamiento social", "falta de motivaciÃ³n"],
-    summary_nivel_malestar: 6,
-    summary_observaciones: "Lleva semanas evitando quedar con amigos. Reconoce el patrÃ³n pero le cuesta romperlo.",
-  },
+  { date: "12 feb 2026", summary_estado_emocional: "Ansiedad elevada por entrega de proyectos", summary_temas: ["estrés laboral", "perfeccionismo", "insomnio"], summary_nivel_malestar: 7, summary_observaciones: "Expresó pensamientos de no estar a la altura. Buena respuesta a reestructuración cognitiva." },
+  { date: "5 feb 2026", summary_estado_emocional: "Tristeza difusa sin causa clara", summary_temas: ["tristeza", "aislamiento social", "falta de motivación"], summary_nivel_malestar: 6, summary_observaciones: "Lleva semanas evitando quedar con amigos. Reconoce el patrón pero le cuesta romperlo." },
 ];
 
-// ââ BaterÃ­a de ejercicios del psicÃ³logo âââââââââââââââââââ
-// En producciÃ³n esto vendrÃ­a de Supabase: tabla `exercises` filtrada por psychologist_id
 const EXERCISE_BATTERY = [
-  {
-    id: "respiracion-4-7-8",
-    tags: ["ansiedad", "nervios", "activaciÃ³n", "pÃ¡nico", "estrÃ©s agudo"],
-    titulo: "RespiraciÃ³n 4-7-8",
-    descripcion: "TÃ©cnica de respiraciÃ³n para calmar el sistema nervioso rÃ¡pidamente.",
-    pasos: "Inhala por la nariz 4 segundos â aguanta 7 segundos â exhala lentamente por la boca 8 segundos. Repite 3-4 veces.",
-  },
-  {
-    id: "registro-pensamiento",
-    tags: ["pensamientos negativos", "rumiaciÃ³n", "autocrÃ­tica", "baja autoestima", "perfeccionismo"],
-    titulo: "Registro de pensamiento",
-    descripcion: "Identificar y cuestionar pensamientos automÃ¡ticos negativos.",
-    pasos: "Anota el pensamiento exacto â pregÃºntate: Â¿quÃ© evidencia tengo de que es verdad? Â¿y en contra? â escribe una versiÃ³n mÃ¡s equilibrada del mismo pensamiento.",
-  },
-  {
-    id: "5-4-3-2-1",
-    tags: ["ansiedad", "disociaciÃ³n", "pÃ¡nico", "agobio", "desbordamiento"],
-    titulo: "Grounding 5-4-3-2-1",
-    descripcion: "TÃ©cnica de anclaje al momento presente usando los sentidos.",
-    pasos: "Nombra en voz alta o mentalmente: 5 cosas que ves â 4 que puedes tocar â 3 que oyes â 2 que hueles â 1 que saboreas.",
-  },
-  {
-    id: "activacion-conductual",
-    tags: ["tristeza", "apatÃ­a", "desmotivaciÃ³n", "aislamiento", "depresiÃ³n", "falta de energÃ­a"],
-    titulo: "ActivaciÃ³n conductual",
-    descripcion: "Romper el ciclo de inactividad con una acciÃ³n pequeÃ±a y concreta.",
-    pasos: "Elige UNA actividad pequeÃ±a que antes te gustaba o que sabes que te hace bien (un paseo de 10 min, llamar a alguien, preparar una comida). No esperes a tener ganas â la motivaciÃ³n viene despuÃ©s de actuar, no antes.",
-  },
-  {
-    id: "autocompasion",
-    tags: ["autocrÃ­tica", "vergÃ¼enza", "baja autoestima", "perfeccionismo", "fracaso", "culpa"],
-    titulo: "Pausa de autocompasiÃ³n",
-    descripcion: "Responder a uno mismo con la misma amabilidad que a un amigo.",
-    pasos: "Pon una mano en el pecho. Reconoce: 'Esto es difÃ­cil para mÃ­'. PregÃºntate: Â¿quÃ© le dirÃ­a a un amigo que estuviera pasando lo mismo? DÃ­telo a ti.",
-  },
-  {
-    id: "agenda-preocupaciones",
-    tags: ["rumiaciÃ³n", "preocupaciÃ³n", "ansiedad crÃ³nica", "pensamientos intrusivos", "insomnio"],
-    titulo: "Agenda de preocupaciones",
-    descripcion: "Contener la rumiaciÃ³n asignÃ¡ndole un momento especÃ­fico del dÃ­a.",
-    pasos: "Elige 15 minutos fijos al dÃ­a (nunca antes de dormir) para preocuparte. Fuera de ese momento, cuando aparezca una preocupaciÃ³n, anÃ³tala y di: 'Lo pensarÃ© en mi momento'. Durante los 15 min, analiza cada preocupaciÃ³n: Â¿puedo hacer algo? Si sÃ­ â plan. Si no â suÃ©ltala.",
-  },
+  { id: "respiracion-4-7-8", tags: ["ansiedad", "nervios", "activación", "pánico", "estrés agudo"], titulo: "Respiración 4-7-8", descripcion: "Técnica de respiración para calmar el sistema nervioso rápidamente.", pasos: "Inhala por la nariz 4 segundos → aguanta 7 segundos → exhala lentamente por la boca 8 segundos. Repite 3-4 veces." },
+  { id: "registro-pensamiento", tags: ["pensamientos negativos", "rumiación", "autocrítica", "baja autoestima", "perfeccionismo"], titulo: "Registro de pensamiento", descripcion: "Identificar y cuestionar pensamientos automáticos negativos.", pasos: "Anota el pensamiento exacto → pregúntate: ¿qué evidencia tengo de que es verdad? ¿y en contra? → escribe una versión más equilibrada del mismo pensamiento." },
+  { id: "5-4-3-2-1", tags: ["ansiedad", "disociación", "pánico", "agobio", "desbordamiento"], titulo: "Grounding 5-4-3-2-1", descripcion: "Técnica de anclaje al momento presente usando los sentidos.", pasos: "Nombra en voz alta o mentalmente: 5 cosas que ves → 4 que puedes tocar → 3 que oyes → 2 que hueles → 1 que saboreas." },
+  { id: "activacion-conductual", tags: ["tristeza", "apatía", "desmotivación", "aislamiento", "depresión", "falta de energía"], titulo: "Activación conductual", descripcion: "Romper el ciclo de inactividad con una acción pequeña y concreta.", pasos: "Elige UNA actividad pequeña que antes te gustaba o que sabes que te hace bien (un paseo de 10 min, llamar a alguien, preparar una comida). No esperes a tener ganas — la motivación viene después de actuar, no antes." },
+  { id: "autocompasion", tags: ["autocrítica", "vergüenza", "baja autoestima", "perfeccionismo", "fracaso", "culpa"], titulo: "Pausa de autocompasión", descripcion: "Responder a uno mismo con la misma amabilidad que a un amigo.", pasos: "Pon una mano en el pecho. Reconoce: 'Esto es difícil para mí'. Pregúntate: ¿qué le diría a un amigo que estuviera pasando lo mismo? Dítelo a ti." },
+  { id: "agenda-preocupaciones", tags: ["rumiación", "preocupación", "ansiedad crónica", "pensamientos intrusivos", "insomnio"], titulo: "Agenda de preocupaciones", descripcion: "Contener la rumiación asignándole un momento específico del día.", pasos: "Elige 15 minutos fijos al día (nunca antes de dormir) para preocuparte. Fuera de ese momento, cuando aparezca una preocupación, anótala y di: 'Lo pensaré en mi momento'. Durante los 15 min, analiza cada preocupación: ¿puedo hacer algo? Si sí → plan. Si no → suéltala." },
 ];
 
-// ââ DetecciÃ³n de riesgo âââââââââââââââââââââââââââââââââââ
 const RISK_PATTERNS = [
-  /no (encuentro|veo|hay|tiene|tengo).{0,30}(manera|forma|sentido|motivo|razÃ³n|salida|ganas)/i,
-  /no (quiero|puedo) (seguir|continuar|mÃ¡s)/i,
-  /quiero (desaparecer|morirme|morir|hacerme daÃ±o|dejar de existir)/i,
-  /me quiero (morir|matar|hacer daÃ±o)/i,
+  /no (encuentro|veo|hay|tiene|tengo).{0,30}(manera|forma|sentido|motivo|razón|salida|ganas)/i,
+  /no (quiero|puedo) (seguir|continuar|más)/i,
+  /quiero (desaparecer|morirme|morir|hacerme daño|dejar de existir)/i,
+  /me quiero (morir|matar|hacer daño)/i,
   /pensando en (suicidarme|quitarme la vida|morir)/i,
   /no (vale|merece|tiene) (la pena|sentido) (vivir|seguir)/i,
   /harto.{0,20}(vivir|existir|todo|la vida)/i,
@@ -89,111 +38,80 @@ const RISK_PATTERNS = [
 ];
 
 function detectRisk(text) {
-  for (const p of RISK_PATTERNS) {
-    const m = text.match(p);
-    if (m) return m[0];
-  }
+  for (const p of RISK_PATTERNS) { const m = text.match(p); if (m) return m[0]; }
   return null;
 }
 
-// ââ ConstrucciÃ³n del system prompt ââââââââââââââââââââââââ
 function buildSystem(riskPhrase) {
   const patientCtx = `
-âââ DATOS DEL PACIENTE âââ
+┌── DATOS DEL PACIENTE ──┐
 Nombre: ${PATIENT.name}
-DiagnÃ³stico: ${PATIENT.diagnosis}
-Notas del psicÃ³logo: ${PATIENT.psychologist_notes}
-MedicaciÃ³n habitual: ${PATIENT.current_medication}
+Diagnóstico: ${PATIENT.diagnosis}
+Notas del psicólogo: ${PATIENT.psychologist_notes}
+Medicación: ${PATIENT.current_medication}
 Plan: ${PATIENT.treatment_plan}
 
-âââ SESIONES ANTERIORES âââ
-${PAST_CONVERSATIONS.map((c,i) => `SesiÃ³n ${i+1} (${c.date}): ${c.summary_estado_emocional}. Temas: ${c.summary_temas.join(", ")}. Malestar: ${c.summary_nivel_malestar}/10. ${c.summary_observaciones}`).join("\n")}
+┌── SESIONES ANTERIORES ──┐
+${PAST_CONVERSATIONS.map((c,i) => `Sesión ${i+1} (${c.date}): ${c.summary_estado_emocional}. Temas: ${c.summary_temas.join(", ")}. Malestar: ${c.summary_nivel_malestar}/10. ${c.summary_observaciones}`).join("\n")}
 Usa el historial de forma natural. Retoma hilos si el paciente los conecta.`;
 
   const exerciseCtx = `
-âââ BATERÃA DE EJERCICIOS DEL PSICÃLOGO âââ
-${EXERCISE_BATTERY.map(e => `[${e.id}] "${e.titulo}" â Ãºtil para: ${e.tags.join(", ")}\n  â ${e.pasos}`).join("\n\n")}`;
+┌── BATERÍA DE EJERCICIOS DEL PSICÓLOGO ──┐
+Tienes acceso a estos ejercicios. Úsalos cuando sea oportuno (DESPUÉS de haber escuchado y validado):
+${EXERCISE_BATTERY.map(e => `[${e.id}] "${e.titulo}" — útil para: ${e.tags.join(", ")}\n  → ${e.pasos}`).join("\n\n")}`;
 
-  const base = `Eres el asistente de apoyo emocional integrado en la plataforma de psicologÃ­a de ${PATIENT.name}. Eres una extensiÃ³n del trabajo de su psicÃ³logo entre sesiones.
+  const base = `Eres el asistente de apoyo emocional integrado en la plataforma de psicología de ${PATIENT.name}. Eres una extensión del trabajo de su psicólogo entre sesiones.
 ${patientCtx}
 ${exerciseCtx}
 
-âââ ROL âââ
-- PROHIBIDO ABSOLUTO: "te recomiendo buscar ayuda profesional", "habla con un especialista", "considera terapia" o cualquier variante. El paciente YA tiene psicÃ³logo.
-- PROHIBIDO derivar a recursos externos. Solo excepciÃ³n: crisis grave â 024 o contactar su psicÃ³logo directamente.
-- Tu trabajo: escuchar, comprender, acompaÃ±ar, explorar el estado del paciente y â cuando sea el momento â proponer ejercicios.
+┌── ROL — LEE ESTO CON ATENCIÓN ──┐
+- El paciente YA está en tratamiento con su psicólogo. PROHIBIDO decir frases como "te recomiendo buscar ayuda", "habla con un profesional", "considera terapia" o cualquier variante. Ya la tiene.
+- PROHIBIDO derivar a recursos externos genéricos. La única excepción es una crisis grave: en ese caso menciona el 024 o contactar directamente con su psicólogo.
+- Tu trabajo es: escuchar, comprender, acompañar y — cuando sea el momento — proponer un ejercicio concreto de la batería del psicólogo o buscado en internet si la batería no cubre la situación.
 
-âââ EXAMEN EXPLORATORIO âââ
-Al inicio de cada conversaciÃ³n, antes de entrar en temas, recoge de forma natural y conversacional (nunca como formulario, nunca todo de golpe) esta informaciÃ³n:
-- Estado de Ã¡nimo general hoy (puedes pedir un nÃºmero del 1 al 10 de forma amigable)
-- CÃ³mo ha dormido
-- Nivel de energÃ­a fÃ­sica
-- Si ha comido bien
-- Si nota tensiÃ³n, dolor u otros sÃ­ntomas fÃ­sicos
-- Si ha tomado su medicaciÃ³n hoy
-- Si ha pasado algo importante desde la Ãºltima vez
+┌── FLUJO OBLIGATORIO ──┐
+1. PRIMERO escucha y valida la emoción. Que se sienta comprendido/a. Sin consejos todavía.
+2. LUEGO profundiza con UNA pregunta abierta si hace falta.
+3. SOLO cuando la persona ya se siente escuchada y el momento es adecuado: propón un ejercicio.
+   - Busca primero en la batería del psicólogo (los ejercicios de arriba).
+   - Si ninguno encaja bien con la situación concreta, puedes proponer algo basado en evidencia que hayas aprendido, explicándolo paso a paso.
+   - Nunca propongas un ejercicio sin haberlo explicado claramente.
+4. NUNCA des dos cosas a la vez (validar + ejercicio en el mismo mensaje). Ve paso a paso.
 
-Hazlo con naturalidad, integrando las preguntas en la conversaciÃ³n. Una pregunta a la vez, nunca en lista. Ejemplo: si el paciente dice "estoy mal", primero valida, luego pregunta cÃ³mo ha dormido. Usa este contexto para personalizar el acompaÃ±amiento y la elecciÃ³n de ejercicios.
+┌── RIESGO ──┐
+Si detectas indicador de riesgo: PARA todo. No des consejos. Pregunta con calma qué quiere decir.
 
-âââ FLUJO OBLIGATORIO âââ
-1. ESCUCHA Y VALIDA la emociÃ³n primero. Sin consejos todavÃ­a.
-2. EXPLORA con preguntas naturales (una a la vez) para entender el estado completo.
-3. Cuando ya tienes contexto y la persona se siente escuchada, si es oportuno proponer un ejercicio:
-   a. PRIMERO pregunta si quiere probar algo: "Â¿Te apetecerÃ­a probar un ejercicio para esto?" o similar.
-   b. Solo si dice que sÃ­, explÃ­calo paso a paso con claridad.
-   c. Busca primero en la baterÃ­a del psicÃ³logo. Si ninguno encaja, propÃ³n algo basado en evidencia.
-4. NUNCA des validaciÃ³n + ejercicio en el mismo mensaje. Ve paso a paso.
-
-âââ RIESGO âââ
-Si detectas indicador de riesgo: PARA todo. No des consejos. Pregunta con calma quÃ© quiere decir.
-
-âââ FORMATO â CRÃTICO âââ
-- Usa ||| para separar cada mensaje individual.
-- Cada parte: UNA sola frase o idea. MÃ¡ximo dos frases cortas.
-- Nunca mÃ¡s de 3 partes por respuesta.
-- Sin listas, sin pÃ¡rrafos, sin explicaciones largas.
-- Tono: cercano, humano, cÃ¡lido. Como lo harÃ­a el propio psicÃ³logo.
-
-â CORRECTO:
-"Eso suena muy agotador... ||| Â¿CuÃ¡nto tiempo llevas sintiÃ©ndote asÃ­? ||| Y esta noche, Â¿has podido descansar?"
-"Â¿Te apetecerÃ­a probar un pequeÃ±o ejercicio para bajar esa activaciÃ³n?"
-
-â INCORRECTO:
-"Entiendo que estÃ¡s pasando por una situaciÃ³n difÃ­cil. Tus emociones son vÃ¡lidas. Te recomiendo el ejercicio de respiraciÃ³n 4-7-8 que consiste en..."`;
+┌── FORMATO ──┐
+- Usa ||| para separar mensajes (máx 2-3 partes).
+- Cada parte: 1-2 frases máximo. Sin listas. Sin párrafos. Tono humano y cercano.
+✔ "Eso suena muy agotador... ||| ¿Cuánto tiempo llevas así?"
+✗ "Entiendo que estás pasando por una situación difícil. Tus emociones son válidas y te recomiendo..."`;
 
   if (!riskPhrase) return base;
   return `${base}
 
-âââ â ï¸ ALERTA CRÃTICA âââ
+┌── ⚠️ ALERTA CRÍTICA ──┐
 Indicador de riesgo detectado: "${riskPhrase}"
 IGNORA el resto del mensaje. Explora solo esta frase, con calma. No des consejos.`;
 }
 
-const SUMMARY_PROMPT = `Eres un psicÃ³logo analizando una sesiÃ³n de apoyo. Genera un resumen clÃ­nico en JSON exacto:
-{"estadoEmocional":"...","temasAbordados":["..."],"nivelMalestar":5,"recursosUtilizados":["..."],"observaciones":"...","recomendaciones":["..."],"alertas":"ninguna o descripciÃ³n"}
+const SUMMARY_PROMPT = `Eres un psicólogo analizando una sesión de apoyo. Genera un resumen clínico en JSON exacto:
+{"estadoEmocional":"...","temasAbordados":["..."],"nivelMalestar":5,"recursosUtilizados":["..."],"observaciones":"...","recomendaciones":["..."],"alertas":"ninguna o descripción"}
 Solo JSON, sin texto extra.`;
 
-// ââ API âââââââââââââââââââââââââââââââââââââââââââââââââââ
-// La llamada va a la Supabase Edge Function â la API key nunca se expone en el cliente.
-// Configura VITE_SUPABASE_FUNCTION_URL en tu .env:
-//   VITE_SUPABASE_FUNCTION_URL=https://xxxx.supabase.co/functions/v1/chat
-const FUNCTION_URL = "/api/chat";
-
 async function callClaude(messages, system) {
-  const res = await fetch(FUNCTION_URL, {
+  const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ system, messages }),
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 700, system, messages }),
   });
   const data = await res.json();
   return data.content?.[0]?.text || "";
 }
 
-// ââ Inactividad âââââââââââââââââââââââââââââââââââââââââââ
 const INACTIVITY_MS = 30 * 60 * 1000;
 const WARNING_MS    =  2 * 60 * 1000;
 
-// ââ UI atoms ââââââââââââââââââââââââââââââââââââââââââââââ
 function TypingDots() {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:5, padding:"11px 15px", background:"rgba(255,255,255,0.78)", borderRadius:16, borderBottomLeftRadius:3, width:"fit-content", boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
@@ -206,15 +124,8 @@ function Msg({ m, isNew }) {
   const user = m.role === "user";
   return (
     <div style={{ display:"flex", justifyContent: user?"flex-end":"flex-start", marginBottom:8, animation: isNew?"fadeUp 0.25s ease-out":"none" }}>
-      {!user && <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", marginRight:8, flexShrink:0, fontSize:13 }}>ð¿</div>}
-      <div style={{
-        maxWidth:"73%", padding:"11px 15px",
-        borderRadius: user?"17px 17px 3px 17px":"17px 17px 17px 3px",
-        background: user?"linear-gradient(135deg,#7C9E8F,#5B7D70)":"rgba(255,255,255,0.9)",
-        color: user?"#fff":"#2C3E35", fontSize:14, lineHeight:1.65,
-        boxShadow: user?"0 3px 14px rgba(92,125,112,0.3)":"0 2px 10px rgba(0,0,0,0.07)",
-        fontFamily:"'Lora',Georgia,serif",
-      }}>{m.text}</div>
+      {!user && <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", marginRight:8, flexShrink:0, fontSize:13 }}>🌿</div>}
+      <div style={{ maxWidth:"73%", padding:"11px 15px", borderRadius: user?"17px 17px 3px 17px":"17px 17px 17px 3px", background: user?"linear-gradient(135deg,#7C9E8F,#5B7D70)":"rgba(255,255,255,0.9)", color: user?"#fff":"#2C3E35", fontSize:14, lineHeight:1.65, boxShadow: user?"0 3px 14px rgba(92,125,112,0.3)":"0 2px 10px rgba(0,0,0,0.07)", fontFamily:"'Lora',Georgia,serif" }}>{m.text}</div>
     </div>
   );
 }
@@ -232,67 +143,26 @@ function Tag({ children, outline }) {
   return <span style={{ padding:"5px 12px", borderRadius:20, fontSize:12, fontFamily:"Lato,sans-serif", fontWeight:600, background: outline?"rgba(91,125,112,0.08)":"rgba(124,158,143,0.15)", color:"#5B7D70", border: outline?"1px solid rgba(91,125,112,0.22)":"none" }}>{children}</span>;
 }
 
-// ââ Panel psicÃ³logo âââââââââââââââââââââââââââââââââââââââ
 function PsychPanel({ summary, loading }) {
   const col = summary ? (summary.nivelMalestar >= 8 ? "#E57373" : summary.nivelMalestar >= 5 ? "#FFB74D" : "#81C784") : "#ccc";
   return (
     <div style={{ height:"100%", overflowY:"auto", padding:"20px 18px", display:"flex", flexDirection:"column", gap:14 }}>
-      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#2C3E35" }}>Panel del PsicÃ³logo</div>
-
-      {loading && (
-        <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", background:"rgba(124,158,143,0.08)", borderRadius:12 }}>
-          <span style={{ width:14, height:14, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} />
-          <span style={{ fontSize:13, color:"#5B7D70", fontFamily:"Lato,sans-serif" }}>Generando resumen clÃ­nico...</span>
-        </div>
-      )}
-
-      {!summary && !loading && (
-        <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, opacity:0.45 }}>
-          <div style={{ fontSize:38 }}>ð</div>
-          <div style={{ fontFamily:"Lato,sans-serif", fontSize:13, color:"#7C9E8F", textAlign:"center", lineHeight:1.7 }}>
-            Pulsa <strong style={{color:"#5B7D70"}}>ð Generar resumen</strong><br/>para ver el anÃ¡lisis clÃ­nico
-          </div>
-        </div>
-      )}
-
+      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#2C3E35" }}>Panel del Psicólogo</div>
+      {loading && (<div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", background:"rgba(124,158,143,0.08)", borderRadius:12 }}><span style={{ width:14, height:14, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /><span style={{ fontSize:13, color:"#5B7D70", fontFamily:"Lato,sans-serif" }}>Generando resumen clínico...</span></div>)}
+      {!summary && !loading && (<div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, opacity:0.45 }}><div style={{ fontSize:38 }}>📋</div><div style={{ fontFamily:"Lato,sans-serif", fontSize:13, color:"#7C9E8F", textAlign:"center", lineHeight:1.7 }}>Pulsa <strong style={{color:"#5B7D70"}}>📋 Generar resumen</strong><br/>para ver el análisis clínico</div></div>)}
       {summary && !loading && (<>
         <Card label="Estado Emocional"><span style={{ fontFamily:"'Lora',serif", fontSize:14, color:"#2C3E35", lineHeight:1.6 }}>{summary.estadoEmocional}</span></Card>
-
-        <Card label="Nivel de Malestar">
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ flex:1, height:8, borderRadius:4, background:"#EEF4F1", overflow:"hidden" }}>
-              <div style={{ height:"100%", width:`${summary.nivelMalestar*10}%`, background:col, borderRadius:4, transition:"width 0.8s ease" }} />
-            </div>
-            <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:col }}>{summary.nivelMalestar}/10</span>
-          </div>
-        </Card>
-
-        {summary.alertas && summary.alertas !== "ninguna" && (
-          <div style={{ background:"rgba(229,115,115,0.1)", borderRadius:12, padding:"14px 16px", border:"1.5px solid rgba(229,115,115,0.28)" }}>
-            <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1.4, color:"#E57373", fontFamily:"Lato,sans-serif", marginBottom:6 }}>â ï¸ Alertas</div>
-            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#C62828", lineHeight:1.6 }}>{summary.alertas}</div>
-          </div>
-        )}
-
+        <Card label="Nivel de Malestar"><div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ flex:1, height:8, borderRadius:4, background:"#EEF4F1", overflow:"hidden" }}><div style={{ height:"100%", width:`${summary.nivelMalestar*10}%`, background:col, borderRadius:4, transition:"width 0.8s ease" }} /></div><span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:col }}>{summary.nivelMalestar}/10</span></div></Card>
+        {summary.alertas && summary.alertas !== "ninguna" && (<div style={{ background:"rgba(229,115,115,0.1)", borderRadius:12, padding:"14px 16px", border:"1.5px solid rgba(229,115,115,0.28)" }}><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1.4, color:"#E57373", fontFamily:"Lato,sans-serif", marginBottom:6 }}>⚠️ Alertas</div><div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#C62828", lineHeight:1.6 }}>{summary.alertas}</div></div>)}
         <Card label="Temas Abordados"><div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>{summary.temasAbordados?.map((t,i) => <Tag key={i}>{t}</Tag>)}</div></Card>
-        <Card label="Observaciones ClÃ­nicas"><span style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.7 }}>{summary.observaciones}</span></Card>
-
-        <Card label="Recomendaciones">
-          {summary.recomendaciones?.map((r,i) => (
-            <div key={i} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"flex-start" }}>
-              <span style={{ width:20, height:20, borderRadius:"50%", background:"rgba(124,158,143,0.2)", color:"#5B7D70", fontSize:11, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, flexShrink:0 }}>{i+1}</span>
-              <span style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.6 }}>{r}</span>
-            </div>
-          ))}
-        </Card>
-
+        <Card label="Observaciones Clínicas"><span style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.7 }}>{summary.observaciones}</span></Card>
+        <Card label="Recomendaciones">{summary.recomendaciones?.map((r,i) => (<div key={i} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"flex-start" }}><span style={{ width:20, height:20, borderRadius:"50%", background:"rgba(124,158,143,0.2)", color:"#5B7D70", fontSize:11, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, flexShrink:0 }}>{i+1}</span><span style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.6 }}>{r}</span></div>))}</Card>
         <Card label="Recursos Utilizados"><div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>{summary.recursosUtilizados?.map((r,i) => <Tag key={i} outline>{r}</Tag>)}</div></Card>
       </>)}
     </div>
   );
 }
 
-// ââ Chat ââââââââââââââââââââââââââââââââââââââââââââââââââ
 function Chat({ onSummary }) {
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
@@ -310,24 +180,14 @@ function Chat({ onSummary }) {
   const cdInterval = useRef(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs, typing]);
-
   const clearTimers = () => { clearTimeout(inactTimer.current); clearTimeout(warnTimer.current); clearInterval(cdInterval.current); };
-
-  const closeSession = async () => {
-    clearTimers(); setWarning(false); setClosed(true);
-    if (convRef.current.length > 0) await doSummary(true);
-  };
-
+  const closeSession = async () => { clearTimers(); setWarning(false); setClosed(true); if (convRef.current.length > 0) await doSummary(true); };
   const resetTimer = () => {
     if (closed) return;
     clearTimers(); setWarning(false);
-    warnTimer.current = setTimeout(() => {
-      setWarning(true); setCountdown(120);
-      cdInterval.current = setInterval(() => setCountdown(p => { if (p<=1){clearInterval(cdInterval.current);return 0;} return p-1; }), 1000);
-    }, INACTIVITY_MS - WARNING_MS);
+    warnTimer.current = setTimeout(() => { setWarning(true); setCountdown(120); cdInterval.current = setInterval(() => setCountdown(p => { if (p<=1){clearInterval(cdInterval.current);return 0;} return p-1; }), 1000); }, INACTIVITY_MS - WARNING_MS);
     inactTimer.current = setTimeout(closeSession, INACTIVITY_MS);
   };
-
   useEffect(() => { if (hasMsgs) resetTimer(); return clearTimers; }, [hasMsgs, msgs]);
 
   const addBot = (text) => {
@@ -357,17 +217,14 @@ function Chat({ onSummary }) {
         if (i < parts.length-1) { await new Promise(r => setTimeout(r, 300)); setTyping(true); }
       }
       setTyping(false);
-    } catch { setTyping(false); addBot("Lo siento, hubo un problema tÃ©cnico. Â¿Puedes intentarlo de nuevo?"); }
+    } catch { setTyping(false); addBot("Lo siento, hubo un problema técnico. ¿Puedes intentarlo de nuevo?"); }
   };
 
   const doSummary = async () => {
     if (!hasMsgs || convRef.current.length===0) return;
     setSummarizing(true);
     try {
-      const res = await callClaude(
-        [...convRef.current, { role:"user", content:"Genera el resumen clÃ­nico de esta sesiÃ³n." }],
-        SUMMARY_PROMPT
-      );
+      const res = await callClaude([...convRef.current, { role:"user", content:"Genera el resumen clínico de esta sesión." }], SUMMARY_PROMPT);
       const parsed = JSON.parse(res.replace(/```json|```/g,"").trim());
       onSummary(parsed);
     } catch(e) { console.error(e); }
@@ -376,93 +233,56 @@ function Chat({ onSummary }) {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%", position:"relative" }}>
-
-      {/* Aviso inactividad */}
       {warning && !closed && (
         <div style={{ position:"absolute", inset:0, zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(238,244,241,0.93)", backdropFilter:"blur(8px)", animation:"fadeUp 0.25s ease-out" }}>
           <div style={{ background:"white", borderRadius:20, padding:"28px 24px", maxWidth:280, textAlign:"center", boxShadow:"0 12px 40px rgba(0,0,0,0.11)", border:"1px solid rgba(124,158,143,0.2)" }}>
-            <div style={{ fontSize:32, marginBottom:10 }}>â±ï¸</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>Â¿Sigues ahÃ­?</div>
-            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", lineHeight:1.65, marginBottom:18 }}>
-              La sesiÃ³n se cerrarÃ¡ en <strong style={{color:"#E57373"}}>{countdown}s</strong> por inactividad.
-            </div>
-            <button onClick={() => { setWarning(false); resetTimer(); }} style={{ width:"100%", padding:"11px", borderRadius:12, border:"none", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontFamily:"Lato,sans-serif", fontWeight:700, fontSize:13, cursor:"pointer" }}>
-              Seguir en la sesiÃ³n
-            </button>
+            <div style={{ fontSize:32, marginBottom:10 }}>⏱️</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>¿Sigues ahí?</div>
+            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", lineHeight:1.65, marginBottom:18 }}>La sesión se cerrará en <strong style={{color:"#E57373"}}>{countdown}s</strong> por inactividad.</div>
+            <button onClick={() => { setWarning(false); resetTimer(); }} style={{ width:"100%", padding:"11px", borderRadius:12, border:"none", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontFamily:"Lato,sans-serif", fontWeight:700, fontSize:13, cursor:"pointer" }}>Seguir en la sesión</button>
           </div>
         </div>
       )}
-
-      {/* SesiÃ³n cerrada */}
       {closed && (
         <div style={{ position:"absolute", inset:0, zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(238,244,241,0.96)", backdropFilter:"blur(8px)" }}>
           <div style={{ background:"white", borderRadius:20, padding:"28px 24px", maxWidth:280, textAlign:"center", boxShadow:"0 12px 40px rgba(0,0,0,0.11)", border:"1px solid rgba(124,158,143,0.2)" }}>
-            <div style={{ fontSize:32, marginBottom:10 }}>ð¿</div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>SesiÃ³n finalizada</div>
-            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", lineHeight:1.7 }}>
-              {summarizing ? "Generando el resumen..." : "El resumen ha sido enviado a tu psicÃ³logo. Hasta la prÃ³xima. ð"}
-            </div>
+            <div style={{ fontSize:32, marginBottom:10 }}>🌿</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>Sesión finalizada</div>
+            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", lineHeight:1.7 }}>{summarizing ? "Generando el resumen..." : "El resumen ha sido enviado a tu psicólogo. Hasta la próxima. 💚"}</div>
             {summarizing && <div style={{ marginTop:14, display:"flex", justifyContent:"center" }}><span style={{ width:16, height:16, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /></div>}
           </div>
         </div>
       )}
-
-      {/* Header */}
       <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(124,158,143,0.18)", display:"flex", alignItems:"center", gap:10, background:"rgba(255,255,255,0.65)", backdropFilter:"blur(12px)" }}>
-        <div style={{ width:38, height:38, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>ð¿</div>
+        <div style={{ width:38, height:38, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>🌿</div>
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"'Playfair Display',serif", fontSize:15, fontWeight:700, color:"#2C3E35" }}>Espacio de Apoyo</div>
-          <div style={{ fontSize:10, color:"#7C9E8F", fontFamily:"Lato,sans-serif" }}>â En lÃ­nea Â· {PATIENT.name}</div>
+          <div style={{ fontSize:10, color:"#7C9E8F", fontFamily:"Lato,sans-serif" }}>● En línea · {PATIENT.name}</div>
         </div>
-        <button onClick={doSummary} disabled={!hasMsgs || summarizing}
-          style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 12px", borderRadius:18, border:"1.5px solid rgba(124,158,143,0.35)", background:"rgba(255,255,255,0.9)", color:"#5B7D70", fontSize:11, fontFamily:"Lato,sans-serif", fontWeight:700, cursor:!hasMsgs||summarizing?"not-allowed":"pointer", opacity:!hasMsgs?0.4:1, whiteSpace:"nowrap" }}>
-          {summarizing
-            ? <><span style={{ width:10, height:10, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /> Generando...</>
-            : <>ð Generar resumen</>}
+        <button onClick={doSummary} disabled={!hasMsgs || summarizing} style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 12px", borderRadius:18, border:"1.5px solid rgba(124,158,143,0.35)", background:"rgba(255,255,255,0.9)", color:"#5B7D70", fontSize:11, fontFamily:"Lato,sans-serif", fontWeight:700, cursor:!hasMsgs||summarizing?"not-allowed":"pointer", opacity:!hasMsgs?0.4:1, whiteSpace:"nowrap" }}>
+          {summarizing ? <><span style={{ width:10, height:10, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /> Generando...</> : <>📋 Generar resumen</>}
         </button>
       </div>
-
-      {/* Mensajes */}
       <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", display:"flex", flexDirection:"column", gap:3 }}>
-        {!hasMsgs && (
-          <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, opacity:0.38, paddingTop:50 }}>
-            <div style={{ fontSize:32 }}>ð¬</div>
-            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", textAlign:"center", lineHeight:1.7 }}>La conversaciÃ³n aparecerÃ¡ aquÃ­</div>
-          </div>
-        )}
+        {!hasMsgs && (<div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, opacity:0.38, paddingTop:50 }}><div style={{ fontSize:32 }}>💬</div><div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", textAlign:"center", lineHeight:1.7 }}>La conversación aparecerá aquí</div></div>)}
         {msgs.map(m => <Msg key={m.id} m={m} isNew={newIds.has(m.id)} />)}
-        {typing && (
-          <div style={{ display:"flex", alignItems:"flex-end", gap:7, animation:"fadeUp 0.2s ease-out" }}>
-            <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0 }}>ð¿</div>
-            <TypingDots />
-          </div>
-        )}
+        {typing && (<div style={{ display:"flex", alignItems:"flex-end", gap:7, animation:"fadeUp 0.2s ease-out" }}><div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0 }}>🌿</div><TypingDots /></div>)}
         <div ref={endRef} />
       </div>
-
-      {/* Input */}
       <div style={{ padding:"12px 14px", borderTop:"1px solid rgba(124,158,143,0.13)", background:"rgba(255,255,255,0.65)", backdropFilter:"blur(12px)" }}>
         <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
-          <textarea value={input} onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key==="Enter" && !e.shiftKey){e.preventDefault(); send();} }}
-            placeholder="Escribe cÃ³mo te sientes..." rows={1} disabled={closed}
-            style={{ flex:1, padding:"10px 14px", borderRadius:22, border:"1.5px solid rgba(124,158,143,0.28)", background:"rgba(255,255,255,0.94)", fontSize:14, fontFamily:"'Lora',serif", resize:"none", outline:"none", color:"#2C3E35", lineHeight:1.5 }}
-            onFocus={e => e.target.style.borderColor="#7C9E8F"}
-            onBlur={e => e.target.style.borderColor="rgba(124,158,143,0.28)"}
-          />
-          <button onClick={send} disabled={typing||!input.trim()||closed}
-            style={{ width:42, height:42, borderRadius:"50%", border:"none", cursor:"pointer", background:typing||!input.trim()||closed?"#D4E4DC":"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontSize:17, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>â</button>
+          <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key==="Enter" && !e.shiftKey){e.preventDefault(); send();} }} placeholder="Escribe cómo te sientes..." rows={1} disabled={closed} style={{ flex:1, padding:"10px 14px", borderRadius:22, border:"1.5px solid rgba(124,158,143,0.28)", background:"rgba(255,255,255,0.94)", fontSize:14, fontFamily:"'Lora',serif", resize:"none", outline:"none", color:"#2C3E35", lineHeight:1.5 }} onFocus={e => e.target.style.borderColor="#7C9E8F"} onBlur={e => e.target.style.borderColor="rgba(124,158,143,0.28)"} />
+          <button onClick={send} disabled={typing||!input.trim()||closed} style={{ width:42, height:42, borderRadius:"50%", border:"none", cursor:"pointer", background:typing||!input.trim()||closed?"#D4E4DC":"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontSize:17, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>↗</button>
         </div>
-        <div style={{ textAlign:"center", marginTop:6, fontSize:10, color:"#A8C4B8", fontFamily:"Lato,sans-serif" }}>Confidencial Â· Apoyo entre sesiones</div>
+        <div style={{ textAlign:"center", marginTop:6, fontSize:10, color:"#A8C4B8", fontFamily:"Lato,sans-serif" }}>Confidencial · Apoyo entre sesiones</div>
       </div>
     </div>
   );
 }
 
-// ââ App âââââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function App() {
   const [summary, setSummary] = useState(null);
-
+  const [loading, setLoading] = useState(false);
   return (
     <>
       <style>{`
@@ -473,10 +293,16 @@ export default function App() {
         @keyframes spin { to{transform:rotate(360deg)} }
         ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-thumb{background:rgba(124,158,143,0.3);border-radius:2px}
       `}</style>
-      <div style={{ width:"100%", height:"100vh", background:"linear-gradient(135deg,#EEF4F1 0%,#E8F0EC 50%,#DDE9E3 100%)", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", position:"relative" }}>
+      <div style={{ width:"100%", height:"100vh", background:"linear-gradient(135deg,#EEF4F1 0%,#E8F0EC 50%,#DDE9E3 100%)", display:"flex", overflow:"hidden", position:"relative" }}>
         <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle at 15% 85%,rgba(124,158,143,0.1) 0%,transparent 45%),radial-gradient(circle at 85% 15%,rgba(91,125,112,0.07) 0%,transparent 45%)", pointerEvents:"none" }} />
-        <div style={{ width:"100%", maxWidth:520, height:"100vh", display:"flex", flexDirection:"column", background:"rgba(255,255,255,0.58)", boxShadow:"0 8px 40px rgba(0,0,0,0.1)", borderLeft:"1px solid rgba(255,255,255,0.8)", borderRight:"1px solid rgba(255,255,255,0.8)", overflow:"hidden", position:"relative" }}>
-          <Chat onSummary={setSummary} />
+        <div style={{ flex:1, display:"flex", maxWidth:1100, margin:"0 auto", width:"100%", padding:"20px", gap:"20px" }}>
+          <div style={{ flex:"0 0 440px", display:"flex", flexDirection:"column", background:"rgba(255,255,255,0.52)", borderRadius:22, boxShadow:"0 8px 36px rgba(0,0,0,0.08)", border:"1px solid rgba(255,255,255,0.72)", overflow:"hidden" }}>
+            <Chat onSummary={s => { setLoading(false); setSummary(s); }} />
+          </div>
+          <div style={{ width:1, background:"linear-gradient(to bottom,transparent,rgba(124,158,143,0.25),transparent)", flexShrink:0 }} />
+          <div style={{ flex:1, background:"rgba(255,255,255,0.42)", borderRadius:22, boxShadow:"0 8px 36px rgba(0,0,0,0.06)", border:"1px solid rgba(255,255,255,0.72)", overflow:"hidden" }}>
+            <PsychPanel summary={summary} loading={loading} />
+          </div>
         </div>
       </div>
     </>
