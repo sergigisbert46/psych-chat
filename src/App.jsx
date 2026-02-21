@@ -1,28 +1,30 @@
 import { useState, useRef, useEffect } from "react";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, query, where, orderBy, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ── Paciente mock ──────────────────────────────────────────
-const PATIENT = {
-  name: "María García",
-  diagnosis: "Trastorno de ansiedad generalizada con rasgos depresivos. Baja autoestima crónica.",
-  psychologist_notes: "Muy autoexigente. Minimiza sus logros. Buena adherencia. Trabaja en educación, estrés alto en períodos de evaluación.",
-  current_medication: "Sertralina 50mg (mañanas).",
-  treatment_plan: "TCC semanal. Reestructuración cognitiva y tolerancia a la incertidumbre.",
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDkzvmDnjkH0T--pHg_hk-DdY4b2q6Upd8",
+  authDomain: "chatpsico-6d6d2.firebaseapp.com",
+  projectId: "chatpsico-6d6d2",
+  storageBucket: "chatpsico-6d6d2.firebasestorage.app",
+  messagingSenderId: "1093443993455",
+  appId: "1:1093443993455:web:cc9f5894216bbb091c729a",
+  measurementId: "G-QWTH18CQ4T",
 };
-
-const PAST_CONVERSATIONS = [
-  { date: "12 feb 2026", summary_estado_emocional: "Ansiedad elevada por entrega de proyectos", summary_temas: ["estrés laboral", "perfeccionismo", "insomnio"], summary_nivel_malestar: 7, summary_observaciones: "Expresó pensamientos de no estar a la altura. Buena respuesta a reestructuración cognitiva." },
-  { date: "5 feb 2026", summary_estado_emocional: "Tristeza difusa sin causa clara", summary_temas: ["tristeza", "aislamiento social", "falta de motivación"], summary_nivel_malestar: 6, summary_observaciones: "Lleva semanas evitando quedar con amigos. Reconoce el patrón pero le cuesta romperlo." },
-];
+const firebaseApp = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+const googleProvider = new GoogleAuthProvider();
 
 const EXERCISE_BATTERY = [
-  { id: "respiracion-4-7-8", tags: ["ansiedad", "nervios", "activación", "pánico", "estrés agudo"], titulo: "Respiración 4-7-8", descripcion: "Técnica de respiración para calmar el sistema nervioso rápidamente.", pasos: "Inhala por la nariz 4 segundos → aguanta 7 segundos → exhala lentamente por la boca 8 segundos. Repite 3-4 veces." },
-  { id: "registro-pensamiento", tags: ["pensamientos negativos", "rumiación", "autocrítica", "baja autoestima", "perfeccionismo"], titulo: "Registro de pensamiento", descripcion: "Identificar y cuestionar pensamientos automáticos negativos.", pasos: "Anota el pensamiento exacto → pregúntate: ¿qué evidencia tengo de que es verdad? ¿y en contra? → escribe una versión más equilibrada del mismo pensamiento." },
-  { id: "5-4-3-2-1", tags: ["ansiedad", "disociación", "pánico", "agobio", "desbordamiento"], titulo: "Grounding 5-4-3-2-1", descripcion: "Técnica de anclaje al momento presente usando los sentidos.", pasos: "Nombra en voz alta o mentalmente: 5 cosas que ves → 4 que puedes tocar → 3 que oyes → 2 que hueles → 1 que saboreas." },
-  { id: "activacion-conductual", tags: ["tristeza", "apatía", "desmotivación", "aislamiento", "depresión", "falta de energía"], titulo: "Activación conductual", descripcion: "Romper el ciclo de inactividad con una acción pequeña y concreta.", pasos: "Elige UNA actividad pequeña que antes te gustaba o que sabes que te hace bien (un paseo de 10 min, llamar a alguien, preparar una comida). No esperes a tener ganas — la motivación viene después de actuar, no antes." },
-  { id: "autocompasion", tags: ["autocrítica", "vergüenza", "baja autoestima", "perfeccionismo", "fracaso", "culpa"], titulo: "Pausa de autocompasión", descripcion: "Responder a uno mismo con la misma amabilidad que a un amigo.", pasos: "Pon una mano en el pecho. Reconoce: 'Esto es difícil para mí'. Pregúntate: ¿qué le diría a un amigo que estuviera pasando lo mismo? Dítelo a ti." },
-  { id: "agenda-preocupaciones", tags: ["rumiación", "preocupación", "ansiedad crónica", "pensamientos intrusivos", "insomnio"], titulo: "Agenda de preocupaciones", descripcion: "Contener la rumiación asignándole un momento específico del día.", pasos: "Elige 15 minutos fijos al día (nunca antes de dormir) para preocuparte. Fuera de ese momento, cuando aparezca una preocupación, anótala y di: 'Lo pensaré en mi momento'. Durante los 15 min, analiza cada preocupación: ¿puedo hacer algo? Si sí → plan. Si no → suéltala." },
+  { id: "respiracion-4-7-8", titulo: "Respiración 4-7-8", pasos: "Inhala 4s → aguanta 7s → exhala 8s. Repite 3-4 veces." },
+  { id: "registro-pensamiento", titulo: "Registro de pensamiento", pasos: "Anota el pensamiento → ¿qué evidencia hay? ¿en contra? → versión más equilibrada." },
+  { id: "5-4-3-2-1", titulo: "Grounding 5-4-3-2-1", pasos: "5 cosas que ves → 4 que tocas → 3 que oyes → 2 que hueles → 1 que saboreas." },
+  { id: "activacion-conductual", titulo: "Activación conductual", pasos: "Elige UNA actividad pequeña. La motivación viene después de actuar, no antes." },
+  { id: "autocompasion", titulo: "Pausa de autocompasión", pasos: "Mano en el pecho. '¿Qué le dirías a un amigo en tu lugar?'" },
+  { id: "agenda-preocupaciones", titulo: "Agenda de preocupaciones", pasos: "15 min fijos al día. Fuera de ese momento: anota y suelta." },
 ];
-
 const RISK_PATTERNS = [
   /no (encuentro|veo|hay|tiene|tengo).{0,30}(manera|forma|sentido|motivo|razón|salida|ganas)/i,
   /no (quiero|puedo) (seguir|continuar|más)/i,
@@ -36,81 +38,60 @@ const RISK_PATTERNS = [
   /sin salida|sin esperanza/i,
   /ya no (quiero|puedo|aguanto|soporto)/i,
 ];
-
 function detectRisk(text) {
   for (const p of RISK_PATTERNS) { const m = text.match(p); if (m) return m[0]; }
   return null;
 }
+function buildSystem(patient, pastSessions, riskPhrase) {
+  const firstName = patient.name?.split(" ")[0] || "el paciente";
+  const sessionsCtx = pastSessions.length > 0
+    ? `SESIONES ANTERIORES (${pastSessions.length}):
+${pastSessions.slice(0,5).map((s,i) => {
+        const sum = s.summary;
+        if (!sum) return `Sesión ${i+1} (${s.date}): sin resumen.`;
+        return `Sesión ${i+1} (${s.date}): ${sum.estadoEmocional}. Temas: ${(sum.temasAbordados||[]).join(", ")}. Malestar: ${sum.nivelMalestar}/10. ${sum.observaciones}`;
+      }).join("
+")}
+Usa el historial si el paciente conecta hilos.`
+    : `Es la primera sesión de ${firstName}. Salúdale con calidez.`;
+  const base = `Eres el asistente de apoyo emocional de ${firstName}. Extensión de su psicólogo entre sesiones.
+DATOS:
+Nombre: ${patient.name}
+${patient.diagnosis ? "Diagnóstico: "+patient.diagnosis : ""}
+${patient.psychologist_notes ? "Notas: "+patient.psychologist_notes : ""}
+${patient.current_medication ? "Medicación: "+patient.current_medication : ""}
+${patient.treatment_plan ? "Plan: "+patient.treatment_plan : ""}
 
-function buildSystem(riskPhrase) {
-  const patientCtx = `
-┌── DATOS DEL PACIENTE ──┐
-Nombre: ${PATIENT.name}
-Diagnóstico: ${PATIENT.diagnosis}
-Notas del psicólogo: ${PATIENT.psychologist_notes}
-Medicación: ${PATIENT.current_medication}
-Plan: ${PATIENT.treatment_plan}
+${sessionsCtx}
 
-┌── SESIONES ANTERIORES ──┐
-${PAST_CONVERSATIONS.map((c,i) => `Sesión ${i+1} (${c.date}): ${c.summary_estado_emocional}. Temas: ${c.summary_temas.join(", ")}. Malestar: ${c.summary_nivel_malestar}/10. ${c.summary_observaciones}`).join("\n")}
-Usa el historial de forma natural. Retoma hilos si el paciente los conecta.`;
+EJERCICIOS:
+${EXERCISE_BATTERY.map(e => `[${e.id}] "${e.titulo}" → ${e.pasos}`).join("
+")}
 
-  const exerciseCtx = `
-┌── BATERÍA DE EJERCICIOS DEL PSICÓLOGO ──┐
-Tienes acceso a estos ejercicios. Úsalos cuando sea oportuno (DESPUÉS de haber escuchado y validado):
-${EXERCISE_BATTERY.map(e => `[${e.id}] "${e.titulo}" — útil para: ${e.tags.join(", ")}\n  → ${e.pasos}`).join("\n\n")}`;
-
-  const base = `Eres el asistente de apoyo emocional integrado en la plataforma de psicología de ${PATIENT.name}. Eres una extensión del trabajo de su psicólogo entre sesiones.
-${patientCtx}
-${exerciseCtx}
-
-┌── ROL — LEE ESTO CON ATENCIÓN ──┐
-- El paciente YA está en tratamiento con su psicólogo. PROHIBIDO decir frases como "te recomiendo buscar ayuda", "habla con un profesional", "considera terapia" o cualquier variante. Ya la tiene.
-- PROHIBIDO derivar a recursos externos genéricos. La única excepción es una crisis grave: en ese caso menciona el 024 o contactar directamente con su psicólogo.
-- Tu trabajo es: escuchar, comprender, acompañar y — cuando sea el momento — proponer un ejercicio concreto de la batería del psicólogo o buscado en internet si la batería no cubre la situación.
-
-┌── FLUJO OBLIGATORIO ──┐
-1. PRIMERO escucha y valida la emoción. Que se sienta comprendido/a. Sin consejos todavía.
-2. LUEGO profundiza con UNA pregunta abierta si hace falta.
-3. SOLO cuando la persona ya se siente escuchada y el momento es adecuado: propón un ejercicio.
-   - Busca primero en la batería del psicólogo (los ejercicios de arriba).
-   - Si ninguno encaja bien con la situación concreta, puedes proponer algo basado en evidencia que hayas aprendido, explicándolo paso a paso.
-   - Nunca propongas un ejercicio sin haberlo explicado claramente.
-4. NUNCA des dos cosas a la vez (validar + ejercicio en el mismo mensaje). Ve paso a paso.
-
-┌── RIESGO ──┐
-Si detectas indicador de riesgo: PARA todo. No des consejos. Pregunta con calma qué quiere decir.
-
-┌── FORMATO ──┐
-- Usa ||| para separar mensajes (máx 2-3 partes).
-- Cada parte: 1-2 frases máximo. Sin listas. Sin párrafos. Tono humano y cercano.
-✔ "Eso suena muy agotador... ||| ¿Cuánto tiempo llevas así?"
-✗ "Entiendo que estás pasando por una situación difícil. Tus emociones son válidas y te recomiendo..."`;
-
+ROL: El paciente YA está en tratamiento. PROHIBIDO sugerir buscar ayuda. Solo en crisis grave: 024.
+FLUJO: 1) Valida emoción. 2) Una pregunta abierta. 3) Solo después propone ejercicio. NUNCA ambos juntos.
+RIESGO: Si detectas indicador → PARA. Explora con calma.
+FORMATO: Usa ||| para separar mensajes (máx 3). 1-2 frases por parte. Sin listas. Tono humano.`;
   if (!riskPhrase) return base;
-  return `${base}
+  return base + `
 
-┌── ⚠️ ALERTA CRÍTICA ──┐
-Indicador de riesgo detectado: "${riskPhrase}"
-IGNORA el resto del mensaje. Explora solo esta frase, con calma. No des consejos.`;
+ALERTA: "${riskPhrase}". Explora solo esto.`;
 }
-
-const SUMMARY_PROMPT = `Eres un psicólogo analizando una sesión de apoyo. Genera un resumen clínico en JSON exacto:
-{"estadoEmocional":"...","temasAbordados":["..."],"nivelMalestar":5,"recursosUtilizados":["..."],"observaciones":"...","recomendaciones":["..."],"alertas":"ninguna o descripción"}
-Solo JSON, sin texto extra.`;
+const SUMMARY_PROMPT = `Eres un psicólogo analizando una sesión. JSON exacto sin texto extra:
+{"estadoEmocional":"...","temasAbordados":["..."],"nivelMalestar":5,"recursosUtilizados":["..."],"observaciones":"...","recomendaciones":["..."],"alertas":"ninguna o descripción"}`;
 
 async function callClaude(messages, system) {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 700, system, messages }),
+    body: JSON.stringify({ system, messages }),
   });
   const data = await res.json();
   return data.content?.[0]?.text || "";
 }
 
 const INACTIVITY_MS = 30 * 60 * 1000;
-const WARNING_MS    =  2 * 60 * 1000;
+const WARNING_MS = 2 * 60 * 1000;
 
 function TypingDots() {
   return (
@@ -119,17 +100,15 @@ function TypingDots() {
     </div>
   );
 }
-
 function Msg({ m, isNew }) {
   const user = m.role === "user";
   return (
-    <div style={{ display:"flex", justifyContent: user?"flex-end":"flex-start", marginBottom:8, animation: isNew?"fadeUp 0.25s ease-out":"none" }}>
+    <div style={{ display:"flex", justifyContent:user?"flex-end":"flex-start", marginBottom:8, animation:isNew?"fadeUp 0.25s ease-out":"none" }}>
       {!user && <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", marginRight:8, flexShrink:0, fontSize:13 }}>🌿</div>}
-      <div style={{ maxWidth:"73%", padding:"11px 15px", borderRadius: user?"17px 17px 3px 17px":"17px 17px 17px 3px", background: user?"linear-gradient(135deg,#7C9E8F,#5B7D70)":"rgba(255,255,255,0.9)", color: user?"#fff":"#2C3E35", fontSize:14, lineHeight:1.65, boxShadow: user?"0 3px 14px rgba(92,125,112,0.3)":"0 2px 10px rgba(0,0,0,0.07)", fontFamily:"'Lora',Georgia,serif" }}>{m.text}</div>
+      <div style={{ maxWidth:"73%", padding:"11px 15px", borderRadius:user?"17px 17px 3px 17px":"17px 17px 17px 3px", background:user?"linear-gradient(135deg,#7C9E8F,#5B7D70)":"rgba(255,255,255,0.9)", color:user?"#fff":"#2C3E35", fontSize:14, lineHeight:1.65, boxShadow:user?"0 3px 14px rgba(92,125,112,0.3)":"0 2px 10px rgba(0,0,0,0.07)", fontFamily:"'Lora',Georgia,serif" }}>{m.text}</div>
     </div>
   );
 }
-
 function Card({ label, children }) {
   return (
     <div style={{ background:"rgba(255,255,255,0.85)", borderRadius:14, padding:"14px 16px", boxShadow:"0 3px 12px rgba(0,0,0,0.05)" }}>
@@ -138,32 +117,84 @@ function Card({ label, children }) {
     </div>
   );
 }
-
 function Tag({ children, outline }) {
-  return <span style={{ padding:"5px 12px", borderRadius:20, fontSize:12, fontFamily:"Lato,sans-serif", fontWeight:600, background: outline?"rgba(91,125,112,0.08)":"rgba(124,158,143,0.15)", color:"#5B7D70", border: outline?"1px solid rgba(91,125,112,0.22)":"none" }}>{children}</span>;
+  return <span style={{ padding:"5px 12px", borderRadius:20, fontSize:12, fontFamily:"Lato,sans-serif", fontWeight:600, background:outline?"rgba(91,125,112,0.08)":"rgba(124,158,143,0.15)", color:"#5B7D70", border:outline?"1px solid rgba(91,125,112,0.22)":"none" }}>{children}</span>;
 }
 
-function PsychPanel({ summary, loading }) {
+function LoginScreen({ onLogin, loading, error }) {
+  return (
+    <div style={{ width:"100%", height:"100vh", background:"linear-gradient(135deg,#EEF4F1 0%,#E8F0EC 50%,#DDE9E3 100%)", display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+      <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle at 15% 85%,rgba(124,158,143,0.12) 0%,transparent 45%),radial-gradient(circle at 85% 15%,rgba(91,125,112,0.08) 0%,transparent 45%)", pointerEvents:"none" }} />
+      <div style={{ background:"rgba(255,255,255,0.75)", backdropFilter:"blur(20px)", borderRadius:28, padding:"52px 44px", maxWidth:400, width:"90%", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.1)", border:"1px solid rgba(255,255,255,0.85)", position:"relative", zIndex:1, animation:"fadeUp 0.4s ease-out" }}>
+        <div style={{ width:76, height:76, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:34, margin:"0 auto 22px", boxShadow:"0 8px 28px rgba(92,125,112,0.32)" }}>🌿</div>
+        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:28, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>Espacio de Apoyo</div>
+        <div style={{ fontFamily:"'Lora',serif", fontSize:14, color:"#7C9E8F", lineHeight:1.75, marginBottom:10 }}>Tu espacio seguro entre sesiones.</div>
+        <div style={{ width:36, height:2, background:"linear-gradient(90deg,#7C9E8F,#5B7D70)", borderRadius:2, margin:"0 auto 32px" }} />
+        <button onClick={onLogin} disabled={loading} style={{ width:"100%", padding:"15px 20px", borderRadius:14, border:"1.5px solid rgba(200,220,210,0.6)", background:loading?"rgba(238,244,241,0.9)":"white", cursor:loading?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:12, boxShadow:"0 4px 18px rgba(0,0,0,0.08)" }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow="0 6px 24px rgba(92,125,112,0.2)"; }}
+          onMouseLeave={e => { e.currentTarget.style.boxShadow="0 4px 18px rgba(0,0,0,0.08)"; }}>
+          {loading
+            ? <><span style={{ width:18, height:18, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /><span style={{ fontFamily:"Lato,sans-serif", fontWeight:700, fontSize:15, color:"#5B7D70" }}>Conectando...</span></>
+            : <><svg width="20" height="20" viewBox="0 0 24 24" style={{ flexShrink:0 }}><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg><span style={{ fontFamily:"Lato,sans-serif", fontWeight:700, fontSize:15, color:"#2C3E35" }}>Continuar con Google</span></>}
+        </button>
+        {error && <div style={{ marginTop:16, padding:"10px 14px", borderRadius:10, background:"rgba(229,115,115,0.08)", border:"1px solid rgba(229,115,115,0.25)", fontFamily:"Lato,sans-serif", fontSize:12, color:"#C62828" }}>{error}</div>}
+        <div style={{ marginTop:28, fontFamily:"Lato,sans-serif", fontSize:11, color:"#B0CCBF", lineHeight:1.6 }}>Solo tú y tu psicólogo tienen acceso a tus conversaciones.</div>
+      </div>
+    </div>
+  );
+}
+
+function PsychPanel({ summary, loading, pastSessions }) {
+  const [showHistory, setShowHistory] = useState(false);
   const col = summary ? (summary.nivelMalestar >= 8 ? "#E57373" : summary.nivelMalestar >= 5 ? "#FFB74D" : "#81C784") : "#ccc";
   return (
     <div style={{ height:"100%", overflowY:"auto", padding:"20px 18px", display:"flex", flexDirection:"column", gap:14 }}>
-      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#2C3E35" }}>Panel del Psicólogo</div>
-      {loading && (<div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", background:"rgba(124,158,143,0.08)", borderRadius:12 }}><span style={{ width:14, height:14, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /><span style={{ fontSize:13, color:"#5B7D70", fontFamily:"Lato,sans-serif" }}>Generando resumen clínico...</span></div>)}
-      {!summary && !loading && (<div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, opacity:0.45 }}><div style={{ fontSize:38 }}>📋</div><div style={{ fontFamily:"Lato,sans-serif", fontSize:13, color:"#7C9E8F", textAlign:"center", lineHeight:1.7 }}>Pulsa <strong style={{color:"#5B7D70"}}>📋 Generar resumen</strong><br/>para ver el análisis clínico</div></div>)}
-      {summary && !loading && (<>
-        <Card label="Estado Emocional"><span style={{ fontFamily:"'Lora',serif", fontSize:14, color:"#2C3E35", lineHeight:1.6 }}>{summary.estadoEmocional}</span></Card>
-        <Card label="Nivel de Malestar"><div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ flex:1, height:8, borderRadius:4, background:"#EEF4F1", overflow:"hidden" }}><div style={{ height:"100%", width:`${summary.nivelMalestar*10}%`, background:col, borderRadius:4, transition:"width 0.8s ease" }} /></div><span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:col }}>{summary.nivelMalestar}/10</span></div></Card>
-        {summary.alertas && summary.alertas !== "ninguna" && (<div style={{ background:"rgba(229,115,115,0.1)", borderRadius:12, padding:"14px 16px", border:"1.5px solid rgba(229,115,115,0.28)" }}><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1.4, color:"#E57373", fontFamily:"Lato,sans-serif", marginBottom:6 }}>⚠️ Alertas</div><div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#C62828", lineHeight:1.6 }}>{summary.alertas}</div></div>)}
-        <Card label="Temas Abordados"><div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>{summary.temasAbordados?.map((t,i) => <Tag key={i}>{t}</Tag>)}</div></Card>
-        <Card label="Observaciones Clínicas"><span style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.7 }}>{summary.observaciones}</span></Card>
-        <Card label="Recomendaciones">{summary.recomendaciones?.map((r,i) => (<div key={i} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"flex-start" }}><span style={{ width:20, height:20, borderRadius:"50%", background:"rgba(124,158,143,0.2)", color:"#5B7D70", fontSize:11, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, flexShrink:0 }}>{i+1}</span><span style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.6 }}>{r}</span></div>))}</Card>
-        <Card label="Recursos Utilizados"><div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>{summary.recursosUtilizados?.map((r,i) => <Tag key={i} outline>{r}</Tag>)}</div></Card>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#2C3E35" }}>Panel del Psicólogo</div>
+        {pastSessions.length > 0 && <button onClick={() => setShowHistory(!showHistory)} style={{ fontSize:11, fontFamily:"Lato,sans-serif", fontWeight:700, color:"#7C9E8F", background:"none", border:"1px solid rgba(124,158,143,0.3)", borderRadius:10, padding:"4px 10px", cursor:"pointer" }}>{showHistory ? "Ver resumen" : `Historial (${pastSessions.length})`}</button>}
+      </div>
+      {showHistory && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {pastSessions.map((s, i) => (
+            <div key={s.id} style={{ background:"rgba(255,255,255,0.85)", borderRadius:12, padding:"12px 14px", boxShadow:"0 2px 8px rgba(0,0,0,0.05)" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                <span style={{ fontFamily:"Lato,sans-serif", fontSize:11, fontWeight:700, color:"#7C9E8F", textTransform:"uppercase", letterSpacing:1 }}>Sesión {pastSessions.length - i}</span>
+                <span style={{ fontFamily:"Lato,sans-serif", fontSize:11, color:"#A8C4B8" }}>{s.date}</span>
+              </div>
+              {s.summary ? (
+                <>
+                  <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.6, marginBottom:6 }}>{s.summary.estadoEmocional}</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:8 }}>{s.summary.temasAbordados?.map((t,j) => <Tag key={j}>{t}</Tag>)}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ flex:1, height:4, borderRadius:2, background:"#EEF4F1", overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${s.summary.nivelMalestar*10}%`, background:s.summary.nivelMalestar>=8?"#E57373":s.summary.nivelMalestar>=5?"#FFB74D":"#81C784", borderRadius:2 }} />
+                    </div>
+                    <span style={{ fontFamily:"Lato,sans-serif", fontSize:11, fontWeight:700, color:"#5B7D70" }}>{s.summary.nivelMalestar}/10</span>
+                  </div>
+                </>
+              ) : <div style={{ fontSize:12, color:"#A8C4B8" }}>Sin resumen</div>}
+            </div>
+          ))}
+        </div>
+      )}
+      {!showHistory && (<>
+        {loading && <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", background:"rgba(124,158,143,0.08)", borderRadius:12 }}><span style={{ width:14, height:14, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /><span style={{ fontSize:13, color:"#5B7D70", fontFamily:"Lato,sans-serif" }}>Generando resumen clínico...</span></div>}
+        {!summary && !loading && <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, opacity:0.45 }}><div style={{ fontSize:38 }}>📋</div><div style={{ fontFamily:"Lato,sans-serif", fontSize:13, color:"#7C9E8F", textAlign:"center", lineHeight:1.7 }}>Pulsa <strong style={{ color:"#5B7D70" }}>📋 Resumen</strong><br/>para ver el análisis clínico</div></div>}
+        {summary && !loading && (<>
+          <Card label="Estado Emocional"><span style={{ fontFamily:"'Lora',serif", fontSize:14, color:"#2C3E35", lineHeight:1.6 }}>{summary.estadoEmocional}</span></Card>
+          <Card label="Nivel de Malestar"><div style={{ display:"flex", alignItems:"center", gap:12 }}><div style={{ flex:1, height:8, borderRadius:4, background:"#EEF4F1", overflow:"hidden" }}><div style={{ height:"100%", width:`${summary.nivelMalestar*10}%`, background:col, borderRadius:4, transition:"width 0.8s ease" }} /></div><span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:col }}>{summary.nivelMalestar}/10</span></div></Card>
+          {summary.alertas && summary.alertas !== "ninguna" && <div style={{ background:"rgba(229,115,115,0.1)", borderRadius:12, padding:"14px 16px", border:"1.5px solid rgba(229,115,115,0.28)" }}><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1.4, color:"#E57373", fontFamily:"Lato,sans-serif", marginBottom:6 }}>⚠️ Alertas</div><div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#C62828", lineHeight:1.6 }}>{summary.alertas}</div></div>}
+          <Card label="Temas Abordados"><div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>{summary.temasAbordados?.map((t,i) => <Tag key={i}>{t}</Tag>)}</div></Card>
+          <Card label="Observaciones Clínicas"><span style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.7 }}>{summary.observaciones}</span></Card>
+          <Card label="Recomendaciones">{summary.recomendaciones?.map((r,i) => <div key={i} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"flex-start" }}><span style={{ width:20, height:20, borderRadius:"50%", background:"rgba(124,158,143,0.2)", color:"#5B7D70", fontSize:11, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, flexShrink:0 }}>{i+1}</span><span style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#2C3E35", lineHeight:1.6 }}>{r}</span></div>)}</Card>
+          <Card label="Recursos Utilizados"><div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>{summary.recursosUtilizados?.map((r,i) => <Tag key={i} outline>{r}</Tag>)}</div></Card>
+        </>)}
       </>)}
     </div>
   );
 }
 
-function Chat({ onSummary }) {
+function Chat({ onSummary, user, patient, pastSessions, onSignOut, onSessionSaved }) {
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -178,17 +209,44 @@ function Chat({ onSummary }) {
   const inactTimer = useRef(null);
   const warnTimer = useRef(null);
   const cdInterval = useRef(null);
+  const sessionDate = useRef(new Date().toLocaleDateString("es-ES", { day:"numeric", month:"short", year:"numeric" }));
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs, typing]);
   const clearTimers = () => { clearTimeout(inactTimer.current); clearTimeout(warnTimer.current); clearInterval(cdInterval.current); };
+
+  const doSummary = async (silent = false) => {
+    if (!hasMsgs || convRef.current.length === 0) return;
+    if (!silent) setSummarizing(true);
+    try {
+      const res = await callClaude([...convRef.current, { role:"user", content:"Genera el resumen clínico de esta sesión." }], SUMMARY_PROMPT);
+      const parsed = JSON.parse(res.replace(/```json|```/g,"").trim());
+      onSummary(parsed);
+      await addDoc(collection(db, "sessions"), { userId: user.uid, date: sessionDate.current, messages: convRef.current, summary: parsed, createdAt: serverTimestamp() });
+      onSessionSaved();
+    } catch(e) { console.error(e); }
+    finally { if (!silent) setSummarizing(false); }
+  };
+
   const closeSession = async () => { clearTimers(); setWarning(false); setClosed(true); if (convRef.current.length > 0) await doSummary(true); };
+
   const resetTimer = () => {
     if (closed) return;
     clearTimers(); setWarning(false);
-    warnTimer.current = setTimeout(() => { setWarning(true); setCountdown(120); cdInterval.current = setInterval(() => setCountdown(p => { if (p<=1){clearInterval(cdInterval.current);return 0;} return p-1; }), 1000); }, INACTIVITY_MS - WARNING_MS);
+    warnTimer.current = setTimeout(() => {
+      setWarning(true); setCountdown(120);
+      cdInterval.current = setInterval(() => setCountdown(p => { if (p<=1){clearInterval(cdInterval.current);return 0;} return p-1; }), 1000);
+    }, INACTIVITY_MS - WARNING_MS);
     inactTimer.current = setTimeout(closeSession, INACTIVITY_MS);
   };
   useEffect(() => { if (hasMsgs) resetTimer(); return clearTimers; }, [hasMsgs, msgs]);
+
+  const startNewSession = () => {
+    clearTimers(); setMsgs([]); setInput(""); setTyping(false); setSummarizing(false);
+    setNewIds(new Set()); setHasMsgs(false); setClosed(false); setWarning(false); setCountdown(120);
+    convRef.current = [];
+    sessionDate.current = new Date().toLocaleDateString("es-ES", { day:"numeric", month:"short", year:"numeric" });
+    onSummary(null);
+  };
 
   const addBot = (text) => {
     const id = Date.now() + Math.random();
@@ -208,7 +266,7 @@ function Chat({ onSummary }) {
     setTyping(true);
     try {
       const risk = detectRisk(text);
-      const reply = await callClaude(convRef.current, buildSystem(risk));
+      const reply = await callClaude(convRef.current, buildSystem(patient, pastSessions, risk));
       const parts = reply.split("|||").map(p => p.trim()).filter(Boolean);
       convRef.current = [...convRef.current, { role:"assistant", content:parts.join(" ") }];
       for (let i = 0; i < parts.length; i++) {
@@ -217,19 +275,10 @@ function Chat({ onSummary }) {
         if (i < parts.length-1) { await new Promise(r => setTimeout(r, 300)); setTyping(true); }
       }
       setTyping(false);
-    } catch { setTyping(false); addBot("Lo siento, hubo un problema técnico. ¿Puedes intentarlo de nuevo?"); }
+    } catch { setTyping(false); addBot("Lo siento, hubo un problema técnico."); }
   };
 
-  const doSummary = async () => {
-    if (!hasMsgs || convRef.current.length===0) return;
-    setSummarizing(true);
-    try {
-      const res = await callClaude([...convRef.current, { role:"user", content:"Genera el resumen clínico de esta sesión." }], SUMMARY_PROMPT);
-      const parsed = JSON.parse(res.replace(/```json|```/g,"").trim());
-      onSummary(parsed);
-    } catch(e) { console.error(e); }
-    setSummarizing(false);
-  };
+  const firstName = patient.name?.split(" ")[0] || user.displayName?.split(" ")[0] || "tú";
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%", position:"relative" }}>
@@ -238,7 +287,7 @@ function Chat({ onSummary }) {
           <div style={{ background:"white", borderRadius:20, padding:"28px 24px", maxWidth:280, textAlign:"center", boxShadow:"0 12px 40px rgba(0,0,0,0.11)", border:"1px solid rgba(124,158,143,0.2)" }}>
             <div style={{ fontSize:32, marginBottom:10 }}>⏱️</div>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>¿Sigues ahí?</div>
-            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", lineHeight:1.65, marginBottom:18 }}>La sesión se cerrará en <strong style={{color:"#E57373"}}>{countdown}s</strong> por inactividad.</div>
+            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", lineHeight:1.65, marginBottom:18 }}>La sesión se cerrará en <strong style={{ color:"#E57373" }}>{countdown}s</strong> por inactividad.</div>
             <button onClick={() => { setWarning(false); resetTimer(); }} style={{ width:"100%", padding:"11px", borderRadius:12, border:"none", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontFamily:"Lato,sans-serif", fontWeight:700, fontSize:13, cursor:"pointer" }}>Seguir en la sesión</button>
           </div>
         </div>
@@ -248,31 +297,37 @@ function Chat({ onSummary }) {
           <div style={{ background:"white", borderRadius:20, padding:"28px 24px", maxWidth:280, textAlign:"center", boxShadow:"0 12px 40px rgba(0,0,0,0.11)", border:"1px solid rgba(124,158,143,0.2)" }}>
             <div style={{ fontSize:32, marginBottom:10 }}>🌿</div>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:"#2C3E35", marginBottom:8 }}>Sesión finalizada</div>
-            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", lineHeight:1.7 }}>{summarizing ? "Generando el resumen..." : "El resumen ha sido enviado a tu psicólogo. Hasta la próxima. 💚"}</div>
+            <div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", lineHeight:1.7 }}>{summarizing ? "Guardando..." : "Guardada. 💚"}</div>
             {summarizing && <div style={{ marginTop:14, display:"flex", justifyContent:"center" }}><span style={{ width:16, height:16, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /></div>}
+            {!summarizing && <button onClick={startNewSession} style={{ marginTop:18, width:"100%", padding:"11px", borderRadius:12, border:"none", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontFamily:"Lato,sans-serif", fontWeight:700, fontSize:13, cursor:"pointer" }}>✦ Nueva sesión</button>}
           </div>
         </div>
       )}
-      <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(124,158,143,0.18)", display:"flex", alignItems:"center", gap:10, background:"rgba(255,255,255,0.65)", backdropFilter:"blur(12px)" }}>
-        <div style={{ width:38, height:38, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>🌿</div>
-        <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:15, fontWeight:700, color:"#2C3E35" }}>Espacio de Apoyo</div>
-          <div style={{ fontSize:10, color:"#7C9E8F", fontFamily:"Lato,sans-serif" }}>● En línea · {PATIENT.name}</div>
+      <div style={{ padding:"11px 14px", borderBottom:"1px solid rgba(124,158,143,0.18)", display:"flex", alignItems:"center", gap:8, background:"rgba(255,255,255,0.65)", backdropFilter:"blur(12px)" }}>
+        <div style={{ width:34, height:34, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, flexShrink:0 }}>🌿</div>
+        <div style={{ flex:1 }}><div style={{ fontFamily:"'Playfair Display',serif", fontSize:14, fontWeight:700, color:"#2C3E35" }}>Espacio de Apoyo</div><div style={{ fontSize:9, color:"#7C9E8F", fontFamily:"Lato,sans-serif" }}>● En línea · {firstName}</div></div>
+        <div style={{ display:"flex", alignItems:"center", gap:7, padding:"5px 10px", borderRadius:20, background:"rgba(124,158,143,0.07)", border:"1px solid rgba(124,158,143,0.18)" }}>
+          {user?.photoURL ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" style={{ width:24, height:24, borderRadius:"50%", objectFit:"cover", border:"1.5px solid rgba(124,158,143,0.35)" }} /> : <div style={{ width:24, height:24, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, color:"white", fontWeight:700 }}>{firstName[0].toUpperCase()}</div>}
+          <span style={{ fontSize:12, fontFamily:"Lato,sans-serif", fontWeight:600, color:"#5B7D70", maxWidth:80, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{firstName}</span>
+          <button onClick={onSignOut} title="Cerrar sesión" style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 4px", opacity:0.5, transition:"opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.5"}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E57373" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
         </div>
-        <button onClick={doSummary} disabled={!hasMsgs || summarizing} style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 12px", borderRadius:18, border:"1.5px solid rgba(124,158,143,0.35)", background:"rgba(255,255,255,0.9)", color:"#5B7D70", fontSize:11, fontFamily:"Lato,sans-serif", fontWeight:700, cursor:!hasMsgs||summarizing?"not-allowed":"pointer", opacity:!hasMsgs?0.4:1, whiteSpace:"nowrap" }}>
-          {summarizing ? <><span style={{ width:10, height:10, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /> Generando...</> : <>📋 Generar resumen</>}
+        <div style={{ width:1, height:22, background:"rgba(124,158,143,0.2)", margin:"0 2px" }} />
+        <button onClick={() => doSummary(false)} disabled={!hasMsgs || summarizing} style={{ display:"flex", alignItems:"center", gap:4, padding:"6px 10px", borderRadius:18, border:"1.5px solid rgba(124,158,143,0.35)", background:"rgba(255,255,255,0.9)", color:"#5B7D70", fontSize:10, fontFamily:"Lato,sans-serif", fontWeight:700, cursor:!hasMsgs||summarizing?"not-allowed":"pointer", opacity:!hasMsgs?0.4:1, whiteSpace:"nowrap" }}>
+          {summarizing ? <><span style={{ width:9, height:9, border:"2px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /> Guardando...</> : <>📋 Resumen</>}
         </button>
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", display:"flex", flexDirection:"column", gap:3 }}>
-        {!hasMsgs && (<div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, opacity:0.38, paddingTop:50 }}><div style={{ fontSize:32 }}>💬</div><div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", textAlign:"center", lineHeight:1.7 }}>La conversación aparecerá aquí</div></div>)}
+        {!hasMsgs && <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, opacity:0.38, paddingTop:50 }}><div style={{ fontSize:32 }}>💬</div><div style={{ fontFamily:"'Lora',serif", fontSize:13, color:"#5B7D70", textAlign:"center", lineHeight:1.7 }}>Hola {firstName}, ¿cómo te sientes hoy?</div></div>}
         {msgs.map(m => <Msg key={m.id} m={m} isNew={newIds.has(m.id)} />)}
-        {typing && (<div style={{ display:"flex", alignItems:"flex-end", gap:7, animation:"fadeUp 0.2s ease-out" }}><div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0 }}>🌿</div><TypingDots /></div>)}
+        {typing && <div style={{ display:"flex", alignItems:"flex-end", gap:7, animation:"fadeUp 0.2s ease-out" }}><div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0 }}>🌿</div><TypingDots /></div>}
         <div ref={endRef} />
       </div>
       <div style={{ padding:"12px 14px", borderTop:"1px solid rgba(124,158,143,0.13)", background:"rgba(255,255,255,0.65)", backdropFilter:"blur(12px)" }}>
         <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
           <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key==="Enter" && !e.shiftKey){e.preventDefault(); send();} }} placeholder="Escribe cómo te sientes..." rows={1} disabled={closed} style={{ flex:1, padding:"10px 14px", borderRadius:22, border:"1.5px solid rgba(124,158,143,0.28)", background:"rgba(255,255,255,0.94)", fontSize:14, fontFamily:"'Lora',serif", resize:"none", outline:"none", color:"#2C3E35", lineHeight:1.5 }} onFocus={e => e.target.style.borderColor="#7C9E8F"} onBlur={e => e.target.style.borderColor="rgba(124,158,143,0.28)"} />
-          <button onClick={send} disabled={typing||!input.trim()||closed} style={{ width:42, height:42, borderRadius:"50%", border:"none", cursor:"pointer", background:typing||!input.trim()||closed?"#D4E4DC":"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontSize:17, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>↗</button>
+          <button onClick={send} disabled={typing||!input.trim()||closed} style={{ width:42, height:42, borderRadius:"50%", border:"none", cursor:"pointer", background:typing||!input.trim()||closed?"#D4E4DC":"linear-gradient(135deg,#7C9E8F,#5B7D70)", color:"white", fontSize:17, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>→</button>
         </div>
         <div style={{ textAlign:"center", marginTop:6, fontSize:10, color:"#A8C4B8", fontFamily:"Lato,sans-serif" }}>Confidencial · Apoyo entre sesiones</div>
       </div>
@@ -281,30 +336,78 @@ function Chat({ onSummary }) {
 }
 
 export default function App() {
+  const [user, setUser] = useState(undefined);
+  const [patient, setPatient] = useState(null);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [pastSessions, setPastSessions] = useState([]);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState(null);
   const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  useEffect(() => { const unsub = onAuthStateChanged(auth, u => setUser(u || null)); return unsub; }, []);
+  useEffect(() => { if (!user) { setPatient(null); setPastSessions([]); return; } loadOrCreatePatient(user); }, [user]);
+
+  const loadOrCreatePatient = async (u) => {
+    setDataLoading(true);
+    try {
+      const ref = doc(db, "patients", u.uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        setPatient({ id: snap.id, ...snap.data() });
+      } else {
+        const newPatient = { name: u.displayName || u.email.split("@")[0], email: u.email, diagnosis: "", psychologist_notes: "", current_medication: "", treatment_plan: "", createdAt: serverTimestamp() };
+        await setDoc(ref, newPatient);
+        setPatient({ id: u.uid, ...newPatient });
+      }
+      const q = query(collection(db, "sessions"), where("userId","==", u.uid), orderBy("createdAt","desc"));
+      const sessionSnap = await getDocs(q);
+      setPastSessions(sessionSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch(e) {
+      console.error(e);
+      setPatient({ name: u.displayName || u.email, email: u.email, diagnosis:"", psychologist_notes:"", current_medication:"", treatment_plan:"" });
+    }
+    setDataLoading(false);
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoginLoading(true); setLoginError(null);
+    try { await signInWithPopup(auth, googleProvider); }
+    catch (err) { if (err.code !== "auth/popup-closed-by-user") setLoginError("No se pudo iniciar sesión. Inténtalo de nuevo."); }
+    setLoginLoading(false);
+  };
+  const handleSignOut = async () => { await signOut(auth); setPatient(null); setSummary(null); setPastSessions([]); };
+  const handleSessionSaved = () => { if (user) loadOrCreatePatient(user); };
+
+  const STYLES = `
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lora:wght@400;500&family=Lato:wght@400;600;700&display=swap');
+    * { box-sizing:border-box; margin:0; padding:0; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-thumb{background:rgba(124,158,143,0.3);border-radius:2px}
+  `;
+
+  const Spinner = () => <div style={{ width:"100%", height:"100vh", background:"linear-gradient(135deg,#EEF4F1,#DDE9E3)", display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ width:32, height:32, border:"3px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /></div>;
+
+  if (user === undefined || dataLoading) return <><style>{STYLES}</style><Spinner /></>;
+  if (!user) return <><style>{STYLES}</style><LoginScreen onLogin={handleGoogleLogin} loading={loginLoading} error={loginError} /></>;
+
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lora:wght@400;500&family=Lato:wght@400;600;700&display=swap');
-        * { box-sizing:border-box; margin:0; padding:0; }
-        @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes spin { to{transform:rotate(360deg)} }
-        ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-thumb{background:rgba(124,158,143,0.3);border-radius:2px}
-      `}</style>
+      <style>{STYLES}</style>
       <div style={{ width:"100%", height:"100vh", background:"linear-gradient(135deg,#EEF4F1 0%,#E8F0EC 50%,#DDE9E3 100%)", display:"flex", overflow:"hidden", position:"relative" }}>
         <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle at 15% 85%,rgba(124,158,143,0.1) 0%,transparent 45%),radial-gradient(circle at 85% 15%,rgba(91,125,112,0.07) 0%,transparent 45%)", pointerEvents:"none" }} />
         <div style={{ flex:1, display:"flex", maxWidth:1100, margin:"0 auto", width:"100%", padding:"20px", gap:"20px" }}>
           <div style={{ flex:"0 0 440px", display:"flex", flexDirection:"column", background:"rgba(255,255,255,0.52)", borderRadius:22, boxShadow:"0 8px 36px rgba(0,0,0,0.08)", border:"1px solid rgba(255,255,255,0.72)", overflow:"hidden" }}>
-            <Chat onSummary={s => { setLoading(false); setSummary(s); }} />
+            <Chat onSummary={s => { setSummaryLoading(false); setSummary(s); }} user={user} patient={patient} pastSessions={pastSessions} onSignOut={handleSignOut} onSessionSaved={handleSessionSaved} />
           </div>
           <div style={{ width:1, background:"linear-gradient(to bottom,transparent,rgba(124,158,143,0.25),transparent)", flexShrink:0 }} />
           <div style={{ flex:1, background:"rgba(255,255,255,0.42)", borderRadius:22, boxShadow:"0 8px 36px rgba(0,0,0,0.06)", border:"1px solid rgba(255,255,255,0.72)", overflow:"hidden" }}>
-            <PsychPanel summary={summary} loading={loading} />
+            <PsychPanel summary={summary} loading={summaryLoading} pastSessions={pastSessions} />
           </div>
         </div>
       </div>
     </>
   );
-}
+                                   }
