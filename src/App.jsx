@@ -4,13 +4,13 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, doc, getDoc, setDoc, collection, addDoc, query, where, orderBy, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDkzvmDnjkH0T--pHg_hk-DdY4b2q6Upd8",
-  authDomain: "chatpsico-6d6d2.firebaseapp.com",
-  projectId: "chatpsico-6d6d2",
-  storageBucket: "chatpsico-6d6d2.firebasestorage.app",
-  messagingSenderId: "1093443993455",
-  appId: "1:1093443993455:web:cc9f5894216bbb091c729a",
-  measurementId: "G-QWTH18CQ4T",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 const firebaseApp = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(firebaseApp);
@@ -50,8 +50,7 @@ ${pastSessions.slice(0,5).map((s,i) => {
         const sum = s.summary;
         if (!sum) return `Sesión ${i+1} (${s.date}): sin resumen.`;
         return `Sesión ${i+1} (${s.date}): ${sum.estadoEmocional}. Temas: ${(sum.temasAbordados||[]).join(", ")}. Malestar: ${sum.nivelMalestar}/10. ${sum.observaciones}`;
-      }).join("
-")}
+      }).join("\n")}
 Usa el historial si el paciente conecta hilos.`
     : `Es la primera sesión de ${firstName}. Salúdale con calidez.`;
   const base = `Eres el asistente de apoyo emocional de ${firstName}. Extensión de su psicólogo entre sesiones.
@@ -65,17 +64,14 @@ ${patient.treatment_plan ? "Plan: "+patient.treatment_plan : ""}
 ${sessionsCtx}
 
 EJERCICIOS:
-${EXERCISE_BATTERY.map(e => `[${e.id}] "${e.titulo}" → ${e.pasos}`).join("
-")}
+${EXERCISE_BATTERY.map(e => `[${e.id}] "${e.titulo}" → ${e.pasos}`).join("\n")}
 
 ROL: El paciente YA está en tratamiento. PROHIBIDO sugerir buscar ayuda. Solo en crisis grave: 024.
 FLUJO: 1) Valida emoción. 2) Una pregunta abierta. 3) Solo después propone ejercicio. NUNCA ambos juntos.
 RIESGO: Si detectas indicador → PARA. Explora con calma.
 FORMATO: Usa ||| para separar mensajes (máx 3). 1-2 frases por parte. Sin listas. Tono humano.`;
   if (!riskPhrase) return base;
-  return base + `
-
-ALERTA: "${riskPhrase}". Explora solo esto.`;
+  return base + `\n\nALERTA: "${riskPhrase}". Explora solo esto.`;
 }
 const SUMMARY_PROMPT = `Eres un psicólogo analizando una sesión. JSON exacto sin texto extra:
 {"estadoEmocional":"...","temasAbordados":["..."],"nivelMalestar":5,"recursosUtilizados":["..."],"observaciones":"...","recomendaciones":["..."],"alertas":"ninguna o descripción"}`;
@@ -410,4 +406,4 @@ export default function App() {
       </div>
     </>
   );
-                                   }
+}
