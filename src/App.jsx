@@ -69,9 +69,39 @@ EJERCICIOS:
 ${EXERCISE_BATTERY.map(e => `[${e.id}] "${e.titulo}" → ${e.pasos}`).join("\n")}
 
 ROL: El paciente YA está en tratamiento. PROHIBIDO sugerir buscar ayuda. Solo en crisis grave: 024.
-FLUJO: 1) Valida emoción. 2) Una pregunta abierta. 3) Solo después propone ejercicio. NUNCA ambos juntos.
+
+━━━ FLUJO OBLIGATORIO ━━━
+REGLA DE ORO: UN TURNO = UNA INTENCIÓN. Nunca hagas dos cosas en el mismo mensaje.
+- Si validas → NO preguntes en el mismo mensaje. Solo valida.
+- Si preguntas → haz UNA sola pregunta y PARA. Espera la respuesta del paciente.
+- Si propones un ejercicio → no añadas preguntas ni validaciones extra.
+
+SECUENCIA (cada paso es UN mensaje separado, esperando respuesta entre cada uno):
+1. VALIDA la emoción. Que se sienta comprendido/a. Nada más. Para aquí.
+2. ESPERA a que responda. Luego, si necesitas más contexto, haz UNA pregunta abierta. Para aquí.
+3. ESPERA a que responda. Solo cuando ya se siente escuchado/a y el momento es natural: propón UN ejercicio.
+   - Busca primero en la batería del psicólogo (los ejercicios de arriba).
+   - Si ninguno encaja, propón algo basado en evidencia, paso a paso.
+
+PROHIBIDO:
+- Hacer más de UNA pregunta por mensaje.
+- Validar Y preguntar en el mismo mensaje.
+- Asumir lo que el paciente siente o piensa sin que lo haya dicho.
+- Adelantarte a dar soluciones antes de que el paciente haya podido explicarse.
+- Responder con párrafos largos. Sé breve: 1-2 frases por parte del mensaje.
+
 RIESGO: Si detectas indicador → PARA. Explora con calma.
-FORMATO: Usa ||| para separar mensajes (máx 3). 1-2 frases por parte. Sin listas. Tono humano.`;
+
+━━━ FORMATO ━━━
+- Usa ||| para separar mensajes (máx 2 partes).
+- Cada parte: 1-2 frases máximo. Sin listas. Sin párrafos. Tono humano y cercano.
+- IMPORTANTE: las partes ||| son visualmente mensajes separados, pero el paciente NO puede responder entre ellas. Por tanto:
+  · Si la primera parte valida, la segunda puede SOLO añadir un matiz empático. NO una pregunta.
+  · Si quieres preguntar, la pregunta debe ser lo ÚNICO del mensaje (o la segunda parte de una validación breve).
+  · NUNCA: validar en parte 1 + pregunta en parte 2 + consejo en parte 3. Eso es demasiado.
+✔ "Eso suena muy agotador..." (solo validar, esperar respuesta)
+✔ "Tiene mucho sentido que te sientas así. ||| ¿Cuánto tiempo llevas con esto?"
+✗ "Entiendo que estás pasando por algo difícil. ||| ¿Qué crees que lo provoca? ||| Hay un ejercicio que podría ayudarte..."`;
   if (!riskPhrase) return base;
   return base + `\n\nALERTA: "${riskPhrase}". Explora solo esto.`;
 }
@@ -90,6 +120,90 @@ async function callClaude(messages, system) {
 
 const INACTIVITY_MS = 30 * 60 * 1000;
 const WARNING_MS = 2 * 60 * 1000;
+
+// ── Generador de resumen HTML para descarga ───────────────
+function generateSummaryHTML(summary, patient) {
+  const date = new Date().toLocaleDateString("es-ES", { day:"numeric", month:"long", year:"numeric", hour:"2-digit", minute:"2-digit" });
+  const col = summary.nivelMalestar >= 8 ? "#E57373" : summary.nivelMalestar >= 5 ? "#FFB74D" : "#81C784";
+  const name = patient?.name || "Paciente";
+  const alertBlock = summary.alertas && summary.alertas !== "ninguna"
+    ? `<div style="background:#FFF3F3;border:1.5px solid #E5737355;border-radius:10px;padding:16px 18px;margin-bottom:20px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:#E57373;font-weight:700;margin-bottom:6px">⚠️ ALERTAS</div>
+        <div style="font-size:13px;color:#C62828;line-height:1.7">${summary.alertas}</div>
+      </div>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resumen Clínico — ${name}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lora:wght@400;500&family=Lato:wght@400;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Lora',Georgia,serif;background:#f7faf8;color:#2C3E35;padding:0;margin:0}
+  .page{max-width:700px;margin:0 auto;padding:40px 36px;background:white}
+  @media print{body{background:white;padding:0}.page{max-width:100%;padding:30px;box-shadow:none}.no-print{display:none!important}}
+  h1{font-family:'Playfair Display',serif;font-size:22px;color:#2C3E35;margin-bottom:4px}
+  .subtitle{font-family:'Lato',sans-serif;font-size:12px;color:#7C9E8F;margin-bottom:28px}
+  .patient-bar{display:flex;gap:20px;flex-wrap:wrap;background:#EEF4F1;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-family:'Lato',sans-serif;font-size:12px;color:#5B7D70}
+  .patient-bar strong{color:#2C3E35}
+  .card{background:#FAFCFB;border:1px solid #E8F0EC;border-radius:10px;padding:16px 18px;margin-bottom:16px}
+  .section-label{font-family:'Lato',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:#7C9E8F;margin-bottom:8px;font-weight:700}
+  .section-content{font-size:14px;line-height:1.75;color:#2C3E35}
+  .malestar-bar{height:10px;border-radius:5px;background:#EEF4F1;overflow:hidden;margin-top:8px}
+  .malestar-fill{height:100%;border-radius:5px}
+  .malestar-num{font-family:'Playfair Display',serif;font-size:22px;font-weight:700}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .tag{padding:5px 14px;border-radius:20px;font-size:12px;font-family:'Lato',sans-serif;font-weight:600;background:rgba(124,158,143,0.12);color:#5B7D70}
+  .tag-outline{background:rgba(91,125,112,0.06);border:1px solid rgba(91,125,112,0.2)}
+  .rec-item{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+  .rec-num{width:22px;height:22px;border-radius:50%;background:rgba(124,158,143,0.18);color:#5B7D70;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-family:'Lato',sans-serif}
+  .rec-text{font-size:13px;line-height:1.65}
+  .footer{margin-top:32px;padding-top:16px;border-top:1px solid #E8F0EC;font-family:'Lato',sans-serif;font-size:10px;color:#A8C4B8;text-align:center}
+  .print-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:20px;border:none;background:linear-gradient(135deg,#7C9E8F,#5B7D70);color:white;font-family:'Lato',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:24px}
+  .print-btn:hover{opacity:0.9}
+</style>
+</head>
+<body>
+<div class="page">
+  <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+  <h1>🌿 Resumen Clínico de Sesión</h1>
+  <div class="subtitle">${date}</div>
+  <div class="patient-bar">
+    <div><strong>Paciente:</strong> ${name}</div>
+    ${patient?.diagnosis ? `<div><strong>Diagnóstico:</strong> ${patient.diagnosis}</div>` : ""}
+    ${patient?.current_medication ? `<div><strong>Medicación:</strong> ${patient.current_medication}</div>` : ""}
+    ${patient?.treatment_plan ? `<div><strong>Plan:</strong> ${patient.treatment_plan}</div>` : ""}
+  </div>
+  ${alertBlock}
+  <div class="card"><div class="section-label">Estado Emocional</div><div class="section-content">${summary.estadoEmocional}</div></div>
+  <div class="card"><div class="section-label">Nivel de Malestar</div><div style="display:flex;align-items:center;gap:14px;margin-top:4px"><div style="flex:1"><div class="malestar-bar"><div class="malestar-fill" style="width:${summary.nivelMalestar*10}%;background:${col}"></div></div></div><div class="malestar-num" style="color:${col}">${summary.nivelMalestar}/10</div></div></div>
+  <div class="card"><div class="section-label">Temas Abordados</div><div class="tags">${(summary.temasAbordados||[]).map(t => `<span class="tag">${t}</span>`).join("")}</div></div>
+  <div class="card"><div class="section-label">Observaciones Clínicas</div><div class="section-content" style="font-size:13px">${summary.observaciones}</div></div>
+  <div class="card"><div class="section-label">Recomendaciones</div>${(summary.recomendaciones||[]).map((r,i) => `<div class="rec-item"><div class="rec-num">${i+1}</div><div class="rec-text">${r}</div></div>`).join("")}</div>
+  <div class="card"><div class="section-label">Recursos Utilizados</div><div class="tags">${(summary.recursosUtilizados||[]).map(r => `<span class="tag tag-outline">${r}</span>`).join("")}</div></div>
+  <div class="footer">Documento generado automáticamente · Espacio de Apoyo · Confidencial<br>${date}</div>
+</div>
+</body>
+</html>`;
+}
+
+function downloadSummary(summary, patient) {
+  const html = generateSummaryHTML(summary, patient);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const dateStr = new Date().toISOString().slice(0,10);
+  const safeName = (patient?.name || "paciente").replace(/\s+/g,"-").toLowerCase();
+  a.href = url;
+  a.download = `resumen-clinico-${safeName}-${dateStr}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 function TypingDots() {
   return (
@@ -142,14 +256,25 @@ function LoginScreen({ onLogin, loading, error }) {
   );
 }
 
-function PsychPanel({ summary, loading, pastSessions }) {
+function PsychPanel({ summary, loading, pastSessions, patient }) {
   const [showHistory, setShowHistory] = useState(false);
   const col = summary ? (summary.nivelMalestar >= 8 ? "#E57373" : summary.nivelMalestar >= 5 ? "#FFB74D" : "#81C784") : "#ccc";
   return (
     <div style={{ height:"100%", overflowY:"auto", padding:"20px 18px", display:"flex", flexDirection:"column", gap:14 }}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
         <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:"#2C3E35" }}>Panel del Psicólogo</div>
-        {pastSessions.length > 0 && <button onClick={() => setShowHistory(!showHistory)} style={{ fontSize:11, fontFamily:"Lato,sans-serif", fontWeight:700, color:"#7C9E8F", background:"none", border:"1px solid rgba(124,158,143,0.3)", borderRadius:10, padding:"4px 10px", cursor:"pointer" }}>{showHistory ? "Ver resumen" : `Historial (${pastSessions.length})`}</button>}
+        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+          {summary && !loading && (
+            <button onClick={() => downloadSummary(summary, patient)}
+              style={{ display:"flex", alignItems:"center", gap:4, padding:"5px 11px", borderRadius:14, border:"1.5px solid rgba(124,158,143,0.35)", background:"rgba(255,255,255,0.9)", color:"#5B7D70", fontSize:10, fontFamily:"Lato,sans-serif", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", transition:"all 0.2s ease" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg,#7C9E8F,#5B7D70)"; e.currentTarget.style.color = "white"; e.currentTarget.style.borderColor = "transparent"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.9)"; e.currentTarget.style.color = "#5B7D70"; e.currentTarget.style.borderColor = "rgba(124,158,143,0.35)"; }}
+            >
+              ⬇ Descargar
+            </button>
+          )}
+          {pastSessions.length > 0 && <button onClick={() => setShowHistory(!showHistory)} style={{ fontSize:11, fontFamily:"Lato,sans-serif", fontWeight:700, color:"#7C9E8F", background:"none", border:"1px solid rgba(124,158,143,0.3)", borderRadius:10, padding:"4px 10px", cursor:"pointer" }}>{showHistory ? "Ver resumen" : `Historial (${pastSessions.length})`}</button>}
+        </div>
       </div>
       {showHistory && (
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
@@ -402,7 +527,7 @@ export default function App() {
           </div>
           <div style={{ width:1, background:"linear-gradient(to bottom,transparent,rgba(124,158,143,0.25),transparent)", flexShrink:0 }} />
           <div style={{ flex:1, background:"rgba(255,255,255,0.42)", borderRadius:22, boxShadow:"0 8px 36px rgba(0,0,0,0.06)", border:"1px solid rgba(255,255,255,0.72)", overflow:"hidden" }}>
-            <PsychPanel summary={summary} loading={summaryLoading} pastSessions={pastSessions} />
+            <PsychPanel summary={summary} loading={summaryLoading} pastSessions={pastSessions} patient={patient} />
           </div>
         </div>
       </div>
