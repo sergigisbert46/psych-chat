@@ -43,6 +43,8 @@ function detectRisk(text) {
   return null;
 }
 function buildSystem(patient, pastSessions, riskPhrase) {
+  if (!patient) return "Eres un asistente de apoyo emocional. Datos del paciente no disponibles aún.";
+
   const firstName = patient.name?.split(" ")[0] || "el paciente";
   const sessionsCtx = pastSessions.length > 0
     ? `SESIONES ANTERIORES (${pastSessions.length}):
@@ -274,7 +276,7 @@ function Chat({ onSummary, user, patient, pastSessions, onSignOut, onSessionSave
     } catch { setTyping(false); addBot("Lo siento, hubo un problema técnico."); }
   };
 
-  const firstName = patient.name?.split(" ")[0] || user.displayName?.split(" ")[0] || "tú";
+  const firstName = patient?.name?.split(" ")[0] || user?.displayName?.split(" ")[0] || "tú";
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%", position:"relative" }}>
@@ -303,7 +305,7 @@ function Chat({ onSummary, user, patient, pastSessions, onSignOut, onSessionSave
         <div style={{ width:34, height:34, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, flexShrink:0 }}>🌿</div>
         <div style={{ flex:1 }}><div style={{ fontFamily:"'Playfair Display',serif", fontSize:14, fontWeight:700, color:"#2C3E35" }}>Espacio de Apoyo</div><div style={{ fontSize:9, color:"#7C9E8F", fontFamily:"Lato,sans-serif" }}>● En línea · {firstName}</div></div>
         <div style={{ display:"flex", alignItems:"center", gap:7, padding:"5px 10px", borderRadius:20, background:"rgba(124,158,143,0.07)", border:"1px solid rgba(124,158,143,0.18)" }}>
-          {user?.photoURL ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" style={{ width:24, height:24, borderRadius:"50%", objectFit:"cover", border:"1.5px solid rgba(124,158,143,0.35)" }} /> : <div style={{ width:24, height:24, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, color:"white", fontWeight:700 }}>{firstName[0].toUpperCase()}</div>}
+          {user?.photoURL ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" style={{ width:24, height:24, borderRadius:"50%", objectFit:"cover", border:"1.5px solid rgba(124,158,143,0.35)" }} /> : <div style={{ width:24, height:24, borderRadius:"50%", background:"linear-gradient(135deg,#7C9E8F,#5B7D70)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, color:"white", fontWeight:700 }}>{firstName[0]?.toUpperCase() || "?"}</div>}
           <span style={{ fontSize:12, fontFamily:"Lato,sans-serif", fontWeight:600, color:"#5B7D70", maxWidth:80, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{firstName}</span>
           <button onClick={onSignOut} title="Cerrar sesión" style={{ background:"none", border:"none", cursor:"pointer", padding:"2px 4px", opacity:0.5, transition:"opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.5"}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E57373" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -386,7 +388,7 @@ export default function App() {
 
   const Spinner = () => <div style={{ width:"100%", height:"100vh", background:"linear-gradient(135deg,#EEF4F1,#DDE9E3)", display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ width:32, height:32, border:"3px solid #7C9E8F", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite", display:"inline-block" }} /></div>;
 
-  if (user === undefined || dataLoading) return <><style>{STYLES}</style><Spinner /></>;
+  if (user === undefined || dataLoading || (user && !patient)) return <><style>{STYLES}</style><Spinner /></>;
   if (!user) return <><style>{STYLES}</style><LoginScreen onLogin={handleGoogleLogin} loading={loginLoading} error={loginError} /></>;
 
   return (
