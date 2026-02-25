@@ -333,6 +333,7 @@ function Chat({ onSummary, user, patient, pastSessions, onSignOut, onSessionSave
   const warnTimer = useRef(null);
   const cdInterval = useRef(null);
   const sessionDate = useRef(new Date().toLocaleDateString("es-ES", { day:"numeric", month:"short", year:"numeric" }));
+  const riskDetected = useRef(false);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs, typing]);
   const clearTimers = () => { clearTimeout(inactTimer.current); clearTimeout(warnTimer.current); clearInterval(cdInterval.current); };
@@ -344,7 +345,9 @@ function Chat({ onSummary, user, patient, pastSessions, onSignOut, onSessionSave
       const res = await callClaude([...convRef.current, { role:"user", content:"Genera el resumen clínico de esta sesión." }], SUMMARY_PROMPT);
       const parsed = JSON.parse(res.replace(/```json|```/g,"").trim());
       onSummary(parsed);
-      await addDoc(collection(db, "sessions"), { userId: user.uid, date: sessionDate.current, messages: convRef.current, summary: parsed, createdAt: serverTimestamp() });
+      const sessionData = { userId: user.uid, date: sessionDate.current, summary: parsed, messageCount: convRef.current.length, createdAt: serverTimestamp() };
+      if (riskDetected.current) sessionData.messages = convRef.current;
+      await addDoc(collection(db, "sessions"), sessionData);
       onSessionSaved();
     } catch(e) { console.error(e); }
     finally { if (!silent) setSummarizing(false); }
@@ -367,6 +370,7 @@ function Chat({ onSummary, user, patient, pastSessions, onSignOut, onSessionSave
     clearTimers(); setMsgs([]); setInput(""); setTyping(false); setSummarizing(false);
     setNewIds(new Set()); setHasMsgs(false); setClosed(false); setWarning(false); setCountdown(120);
     convRef.current = [];
+    riskDetected.current = false;
     sessionDate.current = new Date().toLocaleDateString("es-ES", { day:"numeric", month:"short", year:"numeric" });
     onSummary(null);
   };
@@ -389,6 +393,7 @@ function Chat({ onSummary, user, patient, pastSessions, onSignOut, onSessionSave
     setTyping(true);
     try {
       const risk = detectRisk(text);
+      if (risk) riskDetected.current = true;
       const reply = await callClaude(convRef.current, buildSystem(patient, pastSessions, risk));
       const parts = reply.split("|||").map(p => p.trim()).filter(Boolean);
       convRef.current = [...convRef.current, { role:"assistant", content:parts.join(" ") }];
